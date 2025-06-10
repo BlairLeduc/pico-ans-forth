@@ -1,0 +1,183 @@
+@
+@   Leduc Forth - a simple FORTH compiler/interpreter for the PicoCalc
+@   Copyright Blair Leduc.
+@   See LICENSE for details.
+@
+@   This file contains the Standard Forth Core workset (arithmatic)
+@   See 2.2.1 Arithmetic and Shift Operators (FPH, p39)
+@
+
+    .include "forth.inc"
+
+    .section .text
+
+    .global _mul
+_mul:
+    popd r0
+    popd r1
+    mul r0, r1, r0
+    pushd r0
+    NEXT
+
+    .global _add
+_add:
+    popd r0
+    popd r1
+    add r0, r1
+    pushd r0
+    NEXT
+
+    .global _sub
+_sub:
+    popd r0
+    popd r1
+    sub r0, r1, r0
+    pushd r0
+    NEXT
+
+    .global _divmod
+_divmod:
+    popd r0                             @ get the divisor
+    popd r1                             @ get dividend
+    cmp r0, #0                          @ check for dividion by zero
+    beq 1f                              @ if zero, branch to error
+
+    sdiv r2, r1, r0                     @ signed symetric divide, r2 = quotient
+    mul r3, r2, r0
+    cmp r1, r3
+    ite lt
+    sublt r3, r3, r1
+    subge r3, r1, r3                    @ remainder, r3 = remander
+
+    pushd r3                            @ push the remainder
+    pushd r2                            @ push the quotient
+    NEXT
+
+1:                                      @ Divide by zero error
+                                        @ TODO: throw an error, ERR_DIVIDE_BY_ZERO, if divide by zero instead
+    eor r0, r0                          @ set r0 to zero
+    pushd r0                            @ push zero for remainder
+    pushd r0                            @ push zero for quotient 
+    NEXT
+
+    .global _incr
+_incr:
+    popd r0
+    add r0, #1
+    pushd r0
+    NEXT
+
+    .global _decr
+_decr:
+    popd r0
+    sub r0, #1
+    pushd r0
+    NEXT
+
+    .global _incr2
+_incr2:
+    popd r0
+    add r0, #2
+    pushd r0
+    NEXT
+
+    .global _decr2
+_decr2:
+    popd r0
+    sub r0, #2
+    pushd r0
+    NEXT
+
+    .global _twomul
+_twomul:
+    popd r0
+    lsl r0, r0, #1                      @ multiply by 2
+    pushd r0
+    NEXT
+
+    .global _twodiv
+_twodiv:
+    popd r0
+    asr r0, r0, #1                      @ divide by 2 (arithmetic shift)
+    pushd r0
+    NEXT
+
+    .global _incr4
+_incr4:
+    popd r0
+    add r0, #4
+    pushd r0
+    NEXT
+
+    .global _decr4
+_decr4:
+    popd r0
+    sub r0, #4                          @ decrement the address by 4 (size of a cell)
+    pushd r0
+    NEXT
+
+    .global _cell_incr
+_cell_incr:
+    popd r0
+    add r0, r0, #4                      @ increment the address by 4 (size of a cell)
+    pushd r0
+    NEXT
+
+    .global _cells
+_cells:
+    popd r0
+    lsl r0, r0, #2                      @ multiply by 4 (size of a cell)
+    pushd r0
+    NEXT
+
+    .global _char_incr
+_char_incr:
+    popd r0
+    add r0, r0, #1                      @ increment the address by 1 (size of a character)
+    pushd r0
+    NEXT
+
+    .global _lshift
+_lshift:
+    popd r0                             @ get the value to shift
+    cmp r0, #0                          @ check for zero shift
+    beq 1f                              @ if zero, branch to no-op
+    cmp r0, #32                         @ check for shift greater than 31
+    bge 1f                              @ if greater than or equal to 32, branch to no-op
+    popd r1                             @ get the number of bits to shift
+    lsl r1, r0                          @ shift left
+    pushd r1                            @ push the result on to the stack
+1:  NEXT
+
+    .global _rshift
+_rshift:
+    popd r0                             @ get the value to shift
+    cmp r0, #0                          @ check for zero shift
+    beq 1f                              @ if zero, branch to no-op
+    cmp r0, #32                         @ check for shift greater than 31
+    bge 1f                              @ if greater than or equal to 32, branch to no-op
+    popd r1                             @ get the number of bits to shift
+    lsr r1, r0                          @ shift right (arithmetic shift)
+    pushd r1                            @ push the result on to the stack
+1:  NEXT
+
+    .global _udivmod
+_udivmod:
+    popd r0                             @ get the divisor
+    popd r1                             @ get the dividend
+    cmp r0, #0                          @ check for division by zero
+    beq 1f                              @ if zero, branch to error
+
+    udiv r2, r1, r0                     @ unsigned divide
+    mul r3, r2, r0                      @ multiply
+    sub r3, r1, r3                      @ subtract to get remainder
+
+    pushd r3                            @ push the remainder
+    pushd r2                            @ push the quotient
+    NEXT
+1:                                      @ Divide by zero error  
+    mov r0, #0                          @ set r0 to zero
+    pushd r0                            @ push zero for remainder
+    pushd r0                            @ push zero for quotient
+    NEXT
+
