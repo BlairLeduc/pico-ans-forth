@@ -77,7 +77,7 @@
 
     .equ CB_PRECEDENCE, 0x80            @ precedence or immediate bit
     .equ CB_SMUDGE,     0x20            @ smudge  or hiddent bit
-    .equ CB_LENGTH,       0x1f	        @ remove the control bits
+    .equ CB_LENGTH,     0x1f            @ remove the control bits
 
 @
 @   Dictionary Macros

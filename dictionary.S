@@ -250,10 +250,10 @@
     defcode "2-",,DECR2,_decr2
 
     @   6.1.0320    2* ( x1 —- x2 ) [core]
-	defcode "2*",,TWOMUL,_twomul
+    defcode "2*",,TWOMUL,_twomul
 
     @   6.1.0330    2/ ( x1 —- x2 ) [core]
-	defcode "2/",,TWODIV,_twodiv
+    defcode "2/",,TWODIV,_twodiv
 
     @               4+ ( n1 —- n2 ) [common usage]
     defcode "4+",,INCR4,_incr4

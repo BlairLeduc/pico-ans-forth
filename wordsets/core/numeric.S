@@ -33,15 +33,15 @@ __number: @ r0 = length of string, r1 = pointer to string
     eor r0, r0                          @ r0 = parsed number (cleared)
     eor r5, r5                          @ r5 = negative flag (cleared)
 
-    cmp r1, #0		                    @ trying to parse a zero-length string is an error, but will return 0.
+    cmp r1, #0                          @ trying to parse a zero-length string is an error, but will return 0.
     beq 5f
 
-    ldr r3, =var_BASE	                @ pointer to BASE
+    ldr r3, =var_BASE                   @ pointer to BASE
     ldrb r3, [r3]                       @ r3 = BASE
 
     @ Check if first character is '-'.
     ldrb r4, [r2], #1                   @ r5 = first character in string
-    cmp r4, #'-'    		            @ negative number?
+    cmp r4, #'-'                        @ negative number?
     bne 2f
     mov r5, #1                          @ set flag to indicate negative number
     subs r1, #1                         @ decrement length of string
@@ -66,7 +66,7 @@ __number: @ r0 = length of string, r1 = pointer to string
     blt 4f
     add r4, #10
 
-3:	cmp r4, r3		                    @ >= BASE?
+3:  cmp r4, r3                          @ >= BASE?
     bge 4f
 
     @ OK, so add it to r0 and loop.
@@ -75,11 +75,11 @@ __number: @ r0 = length of string, r1 = pointer to string
     bne 1b
 
     @ Negate the result if first character was '-' (saved on the stack).
-4:	cmp r5, #0
+4:  cmp r5, #0
     beq 5f
     neg r0, r0
 
-5:	pop {r4-r5}
+5:  pop {r4-r5}
     bx lr
 
     .global _dot

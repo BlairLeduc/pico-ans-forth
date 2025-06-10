@@ -166,7 +166,7 @@ __parse: @ r0 = delimiter, r1 = skip initial spaces
     add r6, #1                          @ increment >IN
     add r1, #1
     cmp r2, r0                          @ is it a delimiter?
-    bne 3b                              @ if not, continue scanning                  		                    
+    bne 3b                              @ if not, continue scanning
 
 5:  sub r1, #1                          @ adjust for delimiter
 6:  movw r3, :lower16:var_TOIN
@@ -209,13 +209,13 @@ __interpret:
     mov r2, r1                          @ r1 = flags byte
     and r2, #CB_LENGTH                  @ r1 = length of name (remove fields)
     add r0, r2                          @ r0 = address of the code field
-	add r0, #3                          @ align
-	and r0, #~3
+    add r0, #3                          @ align
+    and r0, #~3
     ands r6, r2, #CB_PRECEDENCE         @ is precedence flag set?
     bne 5f                              @ yes, execute the word (interpret)
     b 4f                                @ else, interpret or compile it based on STATE
 
-2:	@ Not in the dictionary (not a word) so assume it's a number
+2:  @ Not in the dictionary (not a word) so assume it's a number
     mov r0, r5                          @ r0 = length of the word
     mov r1, r4                          @ r1 = address of the word
     add r1, #1                          @ move past the length in the counted string
@@ -223,7 +223,7 @@ __interpret:
     cmp r1, #0                          @ is it a number?
     bne interpret_error                 @ no, so issue message and abort.  
 
-	@ Have number, are we compiling or executing?
+    @ Have number, are we compiling or executing?
     ldr r2, =var_STATE
     ldr r2, [r2]
     cmp r2, #0                          @ is STATE 0? (interpreting)
@@ -243,7 +243,7 @@ __interpret:
     mov r0, #-1                         @ return true  
     pop {r4-r7, pc}
 
-4:	@ Have word, are we compiling or executing?
+4:  @ Have word, are we compiling or executing?
     ldr r2, =var_STATE
     ldr r2, [r2]
     cmp r2, #0                          @ is STATE 0? (interpreting)
@@ -267,7 +267,7 @@ interpret_done:
     mov r0, #-1                         @ return true
     pop {r4-r7, pc}                     @ pop the parameters off the stack and return
 
-interpret_error:	@ Not a word in the dictionary and not a number, so emit an error and abort.
+interpret_error:    @ Not a word in the dictionary and not a number, so emit an error and abort.
     mov r0, r4
     add r0, #1                          @ r0 = address of the word (skip length byte)
     mov r1, r5
@@ -509,8 +509,8 @@ tick_error:
 
     .global _bracket_tick
 _bracket_tick:
-    ldr r0, [r5], #4			        @ get the address of the next word and skip it.
-    pushd r0		                    @ gush it on the stack.
+    ldr r0, [r5], #4                    @ get the address of the next word and skip it.
+    pushd r0                            @ gush it on the stack.
     NEXT
 
     .global _find
@@ -533,7 +533,7 @@ __find: @ r0 = address of the search string, r1 = length of the search string
     @ Compare the length expected and the length of the word
     ldrb r3, [r7], #1                   @ flags + length field of current entry
     and r3, #CB_SMUDGE|CB_LENGTH        @ name length + smudge flag
-    cmp r3, r1		                    @ length is the same? (smudge flag set will corrupt the comparison)
+    cmp r3, r1                          @ length is the same? (smudge flag set will corrupt the comparison)
     bne 5f                              @ no, so skip to next entry.   
 
     @ Compare the strings in detail.
@@ -566,10 +566,10 @@ __find: @ r0 = address of the search string, r1 = length of the search string
     bx lr
 
     @ Not the same, so check the next entry.
-5:	ldr r2, [r2]                        @ Move back through the link field to the previous word
+5:  ldr r2, [r2]                        @ Move back through the link field to the previous word
     b 1b                                @ .. and loop.
 
-6:	// Not found.
+6:  @ Not found.
     eor r0, r0                          @ Return zero to indicate not found.
     pop {r4-r7}
     bx lr

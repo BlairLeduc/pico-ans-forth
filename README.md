@@ -4,7 +4,7 @@ This hobby project is ANS Forth for the [Raspberry Pi Pico 2 (W)](https://www.ra
 
 > The goal of this project is my personal exploration, development, and enrichment. I wish to learn more about TILs and ANS Forth is the specification that I am targeting.
 
-This is not intended for the embedded Forth use case. There are many TILs out there that are a better suited for this.
+This is not intended for the embedded Forth use case. There are many TILs out there that are better suited for this.
 
 ## Projected Features
 

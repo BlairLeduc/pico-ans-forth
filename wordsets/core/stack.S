@@ -50,7 +50,7 @@ _qdup:
     cmp r0, #0
     beq 1f
     pushd r0
-1:	NEXT
+1:  NEXT
 
     .global _depth
 _depth:
