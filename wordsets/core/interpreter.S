@@ -330,10 +330,9 @@ compile_prompt:
     .global _execute
 _execute:
     popd r0                             @ get xt into r0
-    ldr r0, [r0]                        @ get the address of the code field
-    orr r0, #1                          @ set the thumb bit
-    blx r0                              @ execute
-
+    ldr r1, [r0]
+    orr r1, #1                          @ set the thumb bit   
+    blx r1     
 
     .global _refill
 _refill:

@@ -200,7 +200,13 @@ _allot:
 
     .global _create
 _create:
-    push {r4-r5}
+    bl _create
+    pushd r0
+    NEXT
+
+    .global __create
+__create:
+    push {r4-r5, lr}
     ldr r4, =var_DP
     ldr r5, [r4]                        @ get the current value of DP
     eor r0, r0
@@ -218,10 +224,9 @@ _create:
     and r5, #~3                         @ align the DP to a 4-byte boundary
     ldr r0, =_parameterField
     str r0, [r5], #4
-    str r5, [r4]                        @ update DP
-    pushd r5                            @ push the address of the parameter field onto the data stack
-    pop {r4-r5}
-    NEXT
+    str r5, [r4] 
+    mov r0, r5                          @ set r0 to the address of the parameter field 
+    pop {r4-r5, pc}
 
     .global _parameterField
 _parameterField:
@@ -244,3 +249,91 @@ _unused:
     subs r2, r1, r2                     @ Subtract the bottom of data space from DP
     pushd r2                            @ Push the result onto the data stack
     NEXT
+
+
+    @   6.1.0450    : ( —- ) “colon”
+    @
+    @   Skip leading space delimiters. Parse name delimited by a space. Create a definition for name,
+    @   called a “colon definition”. Enter compilation state and start the current definition, producing
+    @   colon-sys. Append the initiation semantics given below to the current definition.
+    @
+    @   The execution semantics of name will be determined by the words compiled into the body of
+    @   the definition. The current definition shall not be findable in the dictionary until it is ended (or
+    @   until the execution of DOES> in some systems).
+
+    .global _colon
+_colon:
+    bl __create                         @ Create a new word
+    ldr r1, =_docol
+    str r1, [r0, #-4]                   @ Store the address of DOCOL in the word's code field
+    ldr r1, =var_STATE
+    mov r2, #1                          @ Set STATE to compilation state
+    str r2, [r1]                        @ Update STATE to compilation state
+    ldr r1, =var_LATEST
+    ldr r1, [r1]                        @ Get the address of LATEST
+    ldrb r0, [r1, #4]                   @ Get the length/flags
+    orr r0, #CB_SMUDGE                  @ Set the smudge bit (hidden word)
+    strb r0, [r1, #4]                   @ Update the length/flags byte
+    NEXT
+
+    @   6.1.0460    ; ( —- ) “semicolon”
+    @
+    @   Append the run-time semantics below to the current definition. End the current definition,
+    @   allow it to be found in the dictionary and enter interpretation state, consuming colon-sys. If the
+    @   data-space pointer is not aligned, reserve enough data space to align it.
+
+    .global _semicolon
+_semicolon:
+    ldr r1, =var_DP
+    ldr r2, [r1]                        @ Get the current value of DP
+    ldr r0, =EXIT
+    str r0, [r2], #4                    @ Store EXIT in the word's code field
+    add r2, #3
+    and r2, #~3                         @ Align DP to the next 4-byte boundary
+    str r2, [r1]                        @ Update DP
+    ldr r1, =var_LATEST
+    ldr r1, [r1]                        @ Get the address of LATEST
+    ldrb r0, [r1, #4]                   @ Get the length/flags
+    and r0, #~CB_SMUDGE                 @ Remove the smudge bit (hidden word)
+    strb r0, [r1, #4]                   @ Update the length/flags byte
+    ldr r1, =var_STATE
+    mov r0, #0                          @ Set STATE to interpretation state
+    str r0, [r1]                        @ Update STATE to interpretation state
+    NEXT
+
+    @   6.1.2120    RECURSE
+    @
+    @   Append the execution semantics of the current definition to the current definition. An
+    @   ambiguous condition exists if RECURSE appears in a definition after DOES>.
+
+    .global _recurse
+_recurse:
+    ldr r1, =var_LATEST
+    ldr r0, [r1]                        @ Get the address of LATEST
+    bl __tcfa
+    ldr r2, =var_DP
+    ldr r3, [r2]                        @ Get the current value of DP
+    str r0, [r3], #4                    @ Store the address of the current definition in the code field
+    str r3, [r2]                        @ Update DP to point to the next word
+    NEXT
+
+    @   6.2.0455    :NONAME ( -- xt )
+    @
+    @   Create a definition with no name. The execution semantics of the definition are given by the
+    @   words compiled into the body of the definition. The execution token xt returned by :NONAME is
+    @   the same value returned by :NONAME outside of compilation state.
+
+    .global _colon_noname
+_colon_noname:
+    ldr r0, =var_DP
+    ldr r1, [r0]                        @ Get the current value of DP
+    pushd r1                            @ Push the execution token onto the data stack
+    ldr r2, =_docol
+    str r2, [r1], #4                    @ Store the address of DOCOL in the word's code field
+    str r1, [r0]                        @ Update DP to point to the next word
+    ldr r1, =var_STATE
+    mov r2, #1                          @ Set STATE to compilation state
+    str r2, [r1]                        @ Update STATE to compilation state
+    NEXT
+
+

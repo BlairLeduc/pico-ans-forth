@@ -885,16 +885,16 @@
 @
 
     @   6.1.0450    : <name> ( —- ) [core]
-    @defcode ":",CB_PRECEDENCE,COLON,_colon
+    defcode ":",CB_PRECEDENCE,COLON,_colon
 
     @   6.2.0455    :NONAME ( -- xt ) [core ext]
-    @defcode ":NONAME",CB_PRECEDENCE,COLON_NONAME,_colon_noname
+    defcode ":NONAME",CB_PRECEDENCE,COLON_NONAME,_colon_noname
 
     @   6.1.0460    ; ( —- ) [core]
-    @defcode ";",CB_PRECEDENCE,SEMICOLON,_semicolon
+    defcode ";",CB_PRECEDENCE,SEMICOLON,_semicolon
 
     @   6.1.2120    RECURSE ( -- ) [core]
-    @defcode "RECURSE",CB_PRECEDENCE,RECURSE,_recurse
+    defcode "RECURSE",CB_PRECEDENCE,RECURSE,_recurse
 
 @
 @   4.1.4 Input Number Conversion
