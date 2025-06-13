@@ -26,10 +26,10 @@ _char:
     NEXT
 
     .global __number
-__number: @ r0 = length of string, r1 = pointer to string
+__number: @ r0 = pointer to string
     push {r4-r5}
-    mov r2, r1                          @ r2 = start address of string
-    mov r1, r0                          @ r1 = length of string
+    ldrb r1, [r0]                       @ length of the string
+    add r2, r0, #1                      @ start address of string (skip the length byte)
     eor r0, r0                          @ r0 = parsed number (cleared)
     eor r5, r5                          @ r5 = negative flag (cleared)
 

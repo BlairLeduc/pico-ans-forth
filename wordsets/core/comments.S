@@ -12,7 +12,7 @@
 
     .global _dot_paren
 _dot_paren:
-    mov r0, #0x29                       @ ASCII ')'
+    mov r0, #0x29                       @ ASCII '"'
     mov r1, #1                          @ skip leading spaces
     bl __parse
     bl __type

@@ -93,12 +93,7 @@
     defcode "OVER",,OVER,_over
 
     @   6.2.2030    PICK ( +n —- x ) [core ext]
-    defword "PICK",,PICK                @ : pick 1+ 4 * DSP@ + @ ;
-    .word INCR                          @ add one because of 'u' on the stack
-    .word LIT, 4, MUL                   @ multiply by the word size
-    .word DSPFETCH, ADD                 @ add to the stack pointer
-    .word FETCH                         @ and fetch
-    .word EXIT
+    defcode "PICK",,PICK,_pick
 
     @   6.2.2150    ROLL ( +n —- x ) [core ext]
     defword "ROLL",,ROLL                @ : roll dup 0branch ( 32 ) swap >r 1- roll r> swap exit drop ;
@@ -343,7 +338,7 @@
     @               T/ ( t +n —- d ) [core]
     @   TODO
 
-    @   .6.1.2360   UM* ( u1 u2 -— ud ) [core]
+    @   6.1.2360   UM* ( u1 u2 -— ud ) [core]
     @   TODO
 
     @   6.1.2370    UM/MOD ( ud u1 —- u2 u3 ) [core]
@@ -858,7 +853,7 @@
     defcode "'",,TICK,_tick
 
     @   6.1.2510    ['] <name> ( —- ) [core]
-    defcode "[']",,BRACKET_TICK,_bracket_tick
+    defcode "[']",CB_PRECEDENCE,BRACKET_TICK,_bracket_tick
 
     @   6.1.0550    >BODY ( xt —- a-addr ) [core]
     defcode ">BODY",,TO_BODY,_noop
@@ -866,7 +861,24 @@
     @   6.1.1550    FIND ( c-addr —- c-addr 0 | xt 1 | xt -1 ) [core]
     defcode "FIND",,FIND,_find
 
+@
+@   6.1.5 Text Interpreter Conditionals
+@
 
+    @               [DEFINED] <name> ( —- flag ) [common usage]
+    defcode "[DEFINED]",CB_PRECEDENCE,BRACKET_DEFINED,_bracket_defined
+
+    @               [UNDEFINED] <name> ( —- flag ) [common usage]
+    defcode "[UNDEFINED]",CB_PRECEDENCE,BRACKET_UNDEFINED,_bracket_undefined
+
+    @   6.1.0200    [IF] ( —- ) [core]
+    defcode "[IF]",CB_PRECEDENCE,BRACKET_IF,_bracket_if
+
+    @   6.1.0210    [ELSE] ( —- ) [core]
+    defcode "[ELSE]",CB_PRECEDENCE,BRACKET_ELSE,_bracket_else
+
+    @   6.1.0220    [THEN] ( —- ) [core]
+    defcode "[THEN]",CB_PRECEDENCE,BRACKET_THEN,_noop
 
 @
 @   4.1.4 Input Number Conversion
@@ -1000,8 +1012,6 @@
 @
 @   Internal
 @
-
-    defcode "DSP@",,DSPFETCH, _dspfetch
 
     defcode "BRANCH",,BRANCH, _branch
 

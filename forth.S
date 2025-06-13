@@ -10,10 +10,10 @@
 
 @   Register Usage:
 @       r0-r4:  General purpose/scratch registers
-@       r5:     Instruction pointer (holds the address of the next word to execute) [I]
-@       r6:     Return stack pointer [R]
-@       r7:     Float stack pointer  
-@       r8:     Data stack pointer [S]
+@       r5:     Instruction register [I]
+@       r6:     Return stack register [R]
+@       r7:     Float stack register [F] 
+@       r8:     Data stack register [S]
 @       r9:     Reserved by RP2040 SDK (Platform register)
 @       r10-r11: Reserved for C compiler (Frame pointers)
 @       r12:    IP (Intra-Procedure-call scratch)
@@ -22,9 +22,9 @@
 @       r15:    PC (Program counter)
 
 @   Naming conventions:
-@   label: Word with DOCOL and completes wiht EXIT.
-@   _label: Parameters and outputs on the data stack and completes with NEXT.
-@   __label: Parameters and outputs in r0-r3 and completes with bx lr.
+@   label: Secondary word that completes with EXIT.
+@   _label: Primary word that completes with NEXT.
+@   __label: Internal routine where parameters and outputs in r0-r3 and completes with bx lr.
 
 
 
@@ -166,14 +166,9 @@ __check_stacks:
 
     .data
 
-    @ Forth system variables
-    .balign 4
-    .global _error
-_error:
-    .word 0                              @ error code, 0 = no error
-
     @ Forth data stack
     .balign 4
+    .space 8                            @ reserve space for the bottom of the stack pointer in case of overflow   
     .global data_stack, data_stack_top
 data_stack:
     .space DATA_STACK_SIZE
@@ -182,6 +177,7 @@ data_stack_top:                         @ initial top of data stack
 
     @ Forth return stack
     .balign 4
+    .space 8                            @ reserve space for the bottom of the stack pointer in case of overflow   
     .global return_stack, return_stack_top
 return_stack:
     .space RETURN_STACK_SIZE
@@ -190,6 +186,7 @@ return_stack_top:                       @ initial top of return stacki
 
     @ Forth float stack
     .balign 4
+    .space 8                            @ reserve space for the bottom of the stack pointer in case of overflow   
     .global float_stack, float_stack_top
 float_stack:
     .space FLOAT_STACK_SIZE
@@ -202,10 +199,11 @@ float_stack_top:                        @ initial top of float stack
 data_space:
     .space DATA_SPACE_SIZE
 data_space_bottom:                      @ bottom of data space
+    .space 8                            @ reserve space for the bottom of the data space pointer in case of overflow
 
     @ Forth Pad Storage
     .balign 4
-    .global pad_storage, pad_storage_bottom
+    .global pad_storage
 pad_storage:
     .space PAD_SIZE
 

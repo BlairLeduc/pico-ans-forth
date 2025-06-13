@@ -69,11 +69,11 @@
 
     .section .text
 
-    .global _dspfetch
-_dspfetch:
-    mov r0, r8
-    pushd r0
-    NEXT
+    @   6.1.0150 , ( x -- ) “comma”
+    @
+    @   Reserve one cell of data space and store x in the cell. If the data-space pointer is aligned when
+    @   ","" begins execution, it will remain aligned when "," finishes execution. An ambiguous condition
+    @   exists if the data-space pointer is not aligned prior to execution of ",".
 
     .global _comma
 _comma:
@@ -83,28 +83,67 @@ _comma:
 
     .global __comma
 __comma:
-    movw r1, :lower16:var_DP            @ load the address of DP
+    movw r1, :lower16:var_DP            @ load the address of the DP variable
     movt r1, :upper16:var_DP
-    ldr r2, [r1]                        @ get the address of HERE
-    str r0, [r2], #4                    @ store the data at HERE, then increment HERE
-    str r2, [r1]                        @ update HERE in HERE's storage
-    bx lr                               @ return to caller
+    ldr r2, [r1]
+    str r0, [r2], #4                    @ store the data
+    str r2, [r1]                        @ update DP
+    bx lr
+
+
+    @   6.1.2540 ] ( -- ) “right-bracket”
+    @
+    @   Enter compilation state.
 
     .global _rbrac
 _rbrac:
-    eor r0, r0                          @ clear r0
-    movw r0, :lower16:var_STATE         @ load the address of STATE
-    movt r0, :upper16:var_STATE
-    str r0, [r1]                        @ set STATE to 0
-    NEXT
-
-    .global _lbrac
-_lbrac:
     mov r0, #1
     movw r0, :lower16:var_STATE         @ load the address of STATE
     movt r0, :upper16:var_STATE
-    str r0, [r1]                        @ set STATE to 1.
+    str r0, [r1]                        @ set STATE to 1
     NEXT
+
+
+    @   6.1.2500 [ “left-bracket”
+    @
+    @   Compilation:
+    @       Perform the execution semantics given below.
+    @   Execution: ( -- )
+    @       Enter interpretation state. [ is an immediate word.
+
+    .global _lbrac
+_lbrac:
+    eor r0, r0                          @ clear r0
+    movw r0, :lower16:var_STATE         @ load the address of STATE
+    movt r0, :upper16:var_STATE
+    str r0, [r1]                        @ set STATE to 0 (interpretation state)
+    NEXT
+
+
+    @   6.1.2510 ['] "bracket-tick"
+    @
+    @   Compilation: ( “<spaces>name” -- )
+    @       Skip leading space delimiters. Parse name delimited by a space. Find name. Append the run-
+    @       time semantics given below to the current definition.
+    @       An ambiguous condition exists if name is not found.
+    @   Run-time: ( -- xt )
+    @       Place name’s execution token xt on the stack. The execution token returned by the compiled
+    @       phrase "['] X " is the same value returned by "' X " outside of compilation state.
+
+    .global _bracket_tick
+_bracket_tick:
+    @ Compilation
+    bl __tick
+    movw r1, :lower16:var_DP            @ load the address of the DP variable
+    movt r1, :upper16:var_DP
+    ldr r2, [r1]
+    @ Run-time
+    ldr r3, =LIT
+    str r3, [r2], #4                    @ store LIT
+    str r0, [r2], #4                    @ store the execution token xt
+    str r2, [r1]                        @ update DP
+    NEXT
+
 
     .global _branch
 _branch:

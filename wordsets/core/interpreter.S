@@ -102,7 +102,7 @@ _noop:
 
     .global _lit
 _lit:
-@   LIT pushes a literal number onto the stack.
+    @ LIT pushes a literal number onto the stack.
     @ r5 points to the next command, but in this case it points to the next
     @ literal 32 bit integer.  Get that literal into r0 and increment r5.
     ldr r0, [r5], #4
@@ -196,29 +196,18 @@ __interpret:
     mov r0, #0                          @ return false
     pop {r4-r7, pc}
 
-1:  @ Find word in the dictionary
-    mov r4, r0                          @ save r4 = address of the word 
-    mov r5, r1                          @ save r5 = length of the word
-    bl __find                           @ returns r0 = pointer to header or 0 if not found
-    cmp r0, #0                          @ found?
-    beq 2f                              @ no, so assume it's a number
+1:  @ find word in the dictionary
+    bl __find                           @ returns r0 = pointer to header or search string
+    cmp r1, #0                          @         r1 = 0 if not found, 1 if immediate, -1 if not immediate
+    beq 2f                              @ not found? maybe it is a number
 
-    @ Word was found in the dictionary
-    add r0, #4                          @ r0 = address of the flags byte
-    ldrb r1, [r0], #1                   @ Get the flags byte.
-    mov r2, r1                          @ r1 = flags byte
-    and r2, #CB_LENGTH                  @ r1 = length of name (remove fields)
-    add r0, r2                          @ r0 = address of the code field
-    add r0, #3                          @ align
-    and r0, #~3
-    ands r6, r2, #CB_PRECEDENCE         @ is precedence flag set?
-    bne 5f                              @ yes, execute the word (interpret)
+    @ word was found in the dictionary
+    cmp r1, #1
+    beq 5f                              @ is precedence flag set? execute the word (interpret)
     b 4f                                @ else, interpret or compile it based on STATE
 
-2:  @ Not in the dictionary (not a word) so assume it's a number
-    mov r0, r5                          @ r0 = length of the word
-    mov r1, r4                          @ r1 = address of the word
-    add r1, #1                          @ move past the length in the counted string
+2:  @ not in the dictionary (not a word) so assume it's a number
+    mov r4, r0                          @ save address of the word (counted string)
     bl __number                         @ returns the parsed number in r0, r1 > 0 if error
     cmp r1, #0                          @ is it a number?
     bne interpret_error                 @ no, so issue message and abort.  
@@ -253,7 +242,7 @@ __interpret:
 5:  pop {r4-r7, lr}
     push {lr}
     pushr r5
-    ldr r5, =interupt_done_xt
+    ldr r5, =interpret_done_xt
     ldr r1, [r0]
     orr r1, #1                          @ set the thumb bit   
     blx r1                              @ execute the code field
@@ -261,28 +250,25 @@ interpret_done:
     mov r0, #-1                         @ return true
     pop {pc}
 
-6:  @ Compiling a word - append the word to the current dictionary definition.
-    bl __tcfa                           @ get the address of the code field 
+6:  @ compiling a word - append the word to the current dictionary definition.
     bl __comma                          @ append the code field address to the dictionary  
     mov r0, #-1                         @ return true
     pop {r4-r7, pc}                     @ pop the parameters off the stack and return
 
-interpret_error:    @ Not a word in the dictionary and not a number, so emit an error and abort.
+    @ oot a word in the dictionary and not a number, so emit an error and abort
+interpret_error:
     mov r0, r4
-    add r0, #1                          @ r0 = address of the word (skip length byte)
-    mov r1, r5
+    ldrb r1, [r0], #1
     bl __type
-    ldr r0, =errmsg
+    ldr r0, =not_found_error
     bl __type_cstr
 
     pop {r4-r7, lr}
     b _quit
 
-errmsg:
-    .asciz " ?\x0D"
     .balign 4
-interupt_done_xt:
-    .word interpret_done_vector                    @ address to return to after executing the word
+interpret_done_xt:
+    .word interpret_done_vector         @ address to return to after executing the word
 interpret_done_vector:
     .word interpret_done                @ address to return to after executing the word
 
@@ -489,90 +475,344 @@ __tick:
     mov r4, r0                          @ save word address
     mov r5, r1                          @ save word length
     bl __find                           @ find in dictionary
-    cmp r0, #0                          @ found?
-    beq 1f                              @ no, error
+    cmp r1, #0                          @ found?
+    beq not_found                       @ no, error
     bl __tcfa                           @ convert to code field address
-    pop {r4-r5, pc}                            @ return
+    pop {r4-r5, pc}                     @ return
 
-1:  pop {r4-r5, lr}
+
+    .global _bracket_defined
+_bracket_defined:
+    bl __bracket_defined
+    pushd r0                            @ push execution token
+    NEXT
+
+    .global __bracket_defined
+__bracket_defined:
+    push {lr}
+    mov r0, #0x20                       @ space delimiter
+    bl __word                           @ get next word
+    bl __find                           @ find in dictionary
+    cmp r1, #0                          @ found?
+    ite eq
+    moveq r0, #0                        @ if not found, return false
+    movne r0, #-1                       @ if found, return true
+    pop {pc}
+
+
+    .global _bracket_undefined
+_bracket_undefined:
+    bl __bracket_undefined
+    pushd r0                            @ push execution token
+    NEXT
+
+    .global __bracket_undefined
+__bracket_undefined:
+    push {lr}
+    mov r0, #0x20                       @ space delimiter
+    bl __word                           @ get next word
+    bl __find                           @ find in dictionary
+    cmp r1, #0                          @ found?
+    ite eq
+    moveq r0, #-1                       @ if not found, return true
+    movne r0, #0                        @ if found, return false
+    pop {pc}
+
+
+not_found:
+    pop {r4-r5, lr}
     mov r0, r4                          @ restore word address
     add r0, #1                          @ skip length byte
     mov r1, r5                          @ restore length
     bl __type                           @ print the word
-    ldr r0, =tick_error                 @ load error message
+    ldr r0, =not_found_error            @ load error message
     bl __type_cstr                      @ print it
     b _quit                             @ abort
 
-tick_error:
+    .balign 4
+not_found_error:
     .asciz " ?\x0D"
     .balign 4
 
-    .global _bracket_tick
-_bracket_tick:
-    ldr r0, [r5], #4                    @ get the address of the next word and skip it.
-    pushd r0                            @ gush it on the stack.
+    
+    @   15.6.2.2532 [IF] “bracket-if”
+    @
+    @   If flag is true, do nothing. Otherwise, skipping leading spaces, parse and discard space-
+    @   delimited words from the parse area, including nested occurrences of [IF] ... [THEN]
+    @   and [IF] ... [ELSE] ... [THEN], until either the word [ELSE] or the word
+    @   [THEN] has been parsed and discarded. If the parse area becomes exhausted, it is refilled as
+    @   with REFILL. [IF] is an immediate word.
+    @
+    @   An ambiguous condition exists if [IF] is POSTPONEd, or if the end of the input buffer is
+    @   reached and cannot be refilled before the terminating [ELSE] or [THEN] is parsed.
+    .global _bracket_if
+_bracket_if:
+    popd r0
+    bl __bracket_if
     NEXT
 
+    .global __bracket_if
+__bracket_if:
+
+    push {r4, lr}
+    eor r4, r4                          @ r4 = nested level counter
+    cmp r0, #0
+    bne 6f                              @ if flag is true, do nothing and return
+
+1:  mov r0, #0x20                       @ space delimiter
+    mov r1, #1
+    bl __parse                          @ skip initial delimiters
+    cmp r1, #0
+    beq 5f                              @ if no word, branch to refill
+
+    @ Is it [IF]?
+    ldr r2, =word_if
+    mov r3, #word_if_len
+    bl __compare_word                   @ compare the word with [IF]
+    cmp r2, #0                          @ if match, r2 = -1
+    bne 3f                              @ if match, branch to handle [IF]
+
+    @ Is it [ELSE] or [THEN]?
+    cmp r4, #0                          @ check if we are in a nested [IF]
+    bgt 2f                              @ if we are in a nested [IF], ignore the else
+    ldr r2, =word_else
+    mov r3, #word_else_len
+    bl __compare_word                   @ compare the word with [ELSE]
+    cmp r2, #0                          @ if match, r2 = -1
+    bne 6f                              @ if match, branch to handle [ELSE]
+    
+2:  ldr r2, =word_then
+    mov r3, #word_then_len
+    bl __compare_word                   @ compare the word with [THEN]
+    cmp r2, #0                          @ if match, r2 = -1
+    bne 4f                              @ if match, branch to handle [THEN]
+    @ Not [ELSE] or [THEN], so continue parsing words
+    b 1b
+
+3:  @ We have a nested [IF], increment the nested level counter
+    add r4, #1                          @ increment nested level counter
+    b 1b
+
+4:  @ We have [THEN], decrement the nested level counter
+    subs r4, #1                         @ decrement nested level counter
+    bmi 6f                              @ if so, branch to return
+    b 1b
+
+5:  bl __refill
+    cmp r1, #0                          
+    bne 1b                              @ if refilled, continue parsing words  
+
+6:  pop {r4, pc}
+
+
+
+    @ 15.6.2.2531 [ELSE] “bracket-else”
+    @
+    @   Skipping leading spaces, parse and discard space-delimited words from the parse area,
+    @   including nested occurrences of [IF] ... [THEN] and [IF] ... [ELSE] ...
+    @   [THEN], until the word [THEN] has been parsed and discarded. If the parse area becomes
+    @   exhausted, it is refilled as with REFILL. [ELSE] is an immediate word.
+
+    .global _bracket_else
+_bracket_else:
+    bl __bracket_else
+    NEXT
+
+    .global __bracket_else
+__bracket_else:
+    push {r4, lr}
+    eor r4, r4                          @ r4 = nested level counter
+
+1:  mov r0, #0x20                       @ space delimiter
+    mov r1, #1
+    bl __parse                          @ skip initial delimiters
+    cmp r1, #0
+    beq 5f                              @ if no word, branch to refill
+
+    @ Is it [IF]?
+    ldr r2, =word_if
+    mov r3, #word_if_len
+    bl __compare_word                   @ compare the word with [IF]
+    cmp r2, #0                          @ if match, r2 = -1
+    bne 3f                              @ if match, branch to handle [IF]
+
+    @ Is it [THEN]?
+2:  ldr r2, =word_then
+    mov r3, #word_then_len
+    bl __compare_word                   @ compare the word with [THEN]
+    cmp r2, #0                          @ if match, r2 = -1
+    bne 4f                              @ if match, branch to handle [THEN]
+    @ Not [THEN], so continue parsing words
+    b 1b
+
+3:  @ We have a nested [IF], increment the nested level counter
+    add r4, #1                          @ increment nested level counter
+    b 1b
+
+4:  @ We have [THEN], decrement the nested level counter
+    subs r4, #1                         @ decrement nested level counter
+    bmi 6f                              @ if so, branch to return
+    b 1b
+
+5:  bl __refill
+    cmp r1, #0                          
+    bne 1b                              @ if refilled, continue parsing words  
+
+6:  pop {r4, pc}
+
+
+    @   Perform a case-insensitive comparison of a word with a search string
+    @
+    @   Paramters:
+    @       r0 - address of the word to compare
+    @       r1 - length of the word to compare
+    @       r2 - address of the search string
+    @       r3 - length of the search string
+    @   Output:
+    @       r0 - address of the word to compare
+    @       r1 - length of the word to compare
+    @       r2 - -1 for match, 0 for no match
+    .global __compare_word
+__compare_word:
+    push {r4-r7, lr}
+    mov r6, r0                          @ r4 = address of the word to compare
+    mov r7, r1                          @ r5 = length of the word to compare
+    @ check lengths match
+    cmp r1, r3                          @ compare lengths
+    bne 4f                              @ if different, no match
+    
+    @ compare characters
+1:  ldrb r4, [r0], #1                   @ load char from first string
+    ldrb r5, [r2], #1                   @ load char from second string
+    
+    @ convert first char to uppercase if lowercase
+    cmp r4, #'a'
+    blt 2f
+    cmp r4, #'z'
+    bgt 2f
+    sub r4, #32                         @ convert to uppercase
+    
+    @ convert second char to uppercase if lowercase
+2:  cmp r5, #'a'
+    blt 3f
+    cmp r5, #'z'
+    bgt 3f
+    sub r5, #32                         @ convert to uppercase
+    
+3:  cmp r4, r5                          @ compare chars
+    bne 4f                              @ if different, no match
+    subs r1, #1                         @ decrement length
+    bne 1b                              @ if not zero, continue comparing
+    
+    @ match found
+    mov r0, r6                          @ restore address of the word
+    mov r1, r7                          @ restore length of the word
+    mov r2, #-1                         @ return -1 for match
+    pop {r4-r7, pc}
+    
+4:  @ no match
+    mov r0, r6                          @ restore address of the word
+    mov r1, r7                          @ restore length of the word
+    mov r2, #0                          @ return 0 for no match
+    pop {r4-r7, pc}
+
+
+    .balign 4
+    .equ word_if_len, 4
+word_if:
+    .ascii "[IF]"
+
+    .balign 4
+    .equ word_else_len, 6
+word_else:
+    .ascii "[ELSE]"
+    
+    .balign 4
+    .equ word_then_len, 6
+word_then:
+    .ascii "[THEN]"
+
+
+    @   6.1.1550    FIND ( c-addr — c-addr 0 | xt 1 | xt -1 )
+    @
+    @   Find the definition named in the counted string at c-addr. If the definition is not found, return
+    @   c-addr and zero. If the definition is found, return its execution token xt. If the definition is
+    @   immediate, also return one (1), otherwise also return minus-one (-1). For a given string, the
+    @   values returned by FIND while compiling may differ from those returned while not compiling.
     .global _find
 _find:
-    popd r1                            @ r0 = the length of the search string
-    popd r0                            @ r1 = address of the search string
+    popd r0                            @ address of the search string
     bl __find
-    pushd r0                           @ r0 = address of dictionary entry (or NULL)
+    pushd r0                           @ address of dictionary entry
+    pushd r1                           @ 0 = not found, 1 = immediate, -1 = otherwise
     NEXT
 
-__find: @ r0 = address of the search string, r1 = length of the search string
+    @   Parameters:
+    @       r0 - address of the search string (counted string)
+    @   Output:
+    @       r0 - execution token xt of the word in the dictionary (or address of the search string if not found)
+    @       r1 - 0 if not found, 1 if immediate, -1 if not immediate
+
+__find:
     push {r4-r7}
-    ldr r2, =var_LATEST                 @ points to current dictionary entry
- 1: ldr r7, [r2]
+
+    ldr r2, =var_LATEST
+ 1: mov r7, r2
     cmp r7, #0                          @ end of dictionary?
     beq 6f
-
-    mov r6, r0                          @ address of the search string
+    ldrb r1, [r0]                       @ length of the search string
     add r7, #4                          @ address of the current word's name
-    @ Compare the length expected and the length of the word
     ldrb r3, [r7], #1                   @ flags + length field of current entry
     and r3, #CB_SMUDGE|CB_LENGTH        @ name length + smudge flag
     cmp r3, r1                          @ length is the same? (smudge flag set will corrupt the comparison)
     bne 5f                              @ no, so skip to next entry.   
 
-    @ Compare the strings in detail.
-    add r6, #1                          @ move past length byte
+    @ same length, compare the names
+    add r6, r0, #1                      @ move past length byte
 2:  ldrb r4, [r6], #1                   @ load char from the search string
     ldrb r5, [r7], #1                   @ load char from the current entry name
-    
-    @ Convert r4 to uppecase if it's lowercase
+
+    @ convert search character to uppecase if it's lowercase
     cmp r4, #'a'
     blt 3f
     cmp r4, #'z'
     bgt 3f
-    sub r4, #32                         @ Convert to uppercase by adding 32
+    sub r4, #32                         @ convert to uppercase by subtracting 32
 
-    @ Convert r5 to uppercase if it's lowercase 
+    @ convert entry name character to uppercase if it's lowercase
 3:  cmp r5, #'a'
     blt 4f
     cmp r5, #'z'
     bgt 4f
-    sub r5, #32                         @ Convert to uppercase by adding 32
+    sub r5, #32                         @ convert to uppercase by subtracting 32
 
-4:  cmp r4, r5                          @ Compare characters
-    bne 5f                              @ Not the same, so skip to next entry
-    subs r3, #1                         @ Decrement length
-    bne 2b         
+    @ comapre the uppercase characters
+4:  cmp r4, r5
+    bne 5f                              @ not the same, so skip to next entry
+    subs r1, #1
+    bne 2b                              @ if not zero, continue comparing characters    
     
-    @ The strings are the same - return the header pointer in r0
-    ldr r0, [r2]
+    @ the search string matches the current entry
+    ldrb r1, [r2, #4]
+    ands r1, #CB_PRECEDENCE             @ is precedence flag set?
+    ite ne
+    movne r1, #1                        @ if not 0 (precendence), return 1
+    moveq r1, #-1                       @ otherwise, return -1
+    add r2, #8
+    add r2, r3
+    and r0, r2, #~3
     pop {r4-r7}                         @ return to caller
     bx lr
 
-    @ Not the same, so check the next entry.
-5:  ldr r2, [r2]                        @ Move back through the link field to the previous word
-    b 1b                                @ .. and loop.
+    @ not the same, so check the next entry
+5:  ldr r2, [r2]                        @ move to the previous word
+    b 1b
 
 6:  @ Not found.
-    eor r0, r0                          @ Return zero to indicate not found.
+    eor r1, r1                          @ c-addr in r0, and zero int r1 to indicate not found
     pop {r4-r7}
     bx lr
+
 
     .global __tcfa
 __tcfa:

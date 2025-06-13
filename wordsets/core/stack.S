@@ -83,6 +83,21 @@ _over:
     pushd r0
     NEXT
 
+
+    @   6.2.2030 PICK ( xu ... x1 x0 u -- xu ... x1 x0 xu )
+    @
+    @   Remove u. Copy the xu to the top of the stack. An ambiguous condition exists if there are less
+    @   than u+2 items on the stack before PICK is executed.
+
+    .global _pick
+_pick:
+    popd r0                             @ get the index
+    lsl r0, #2                          @ convert index to byte offset
+    add r1, r8, r0                      @ calculate the address of the element
+    ldr r0, [r1]
+    pushd r0
+    NEXT
+
     .global _rot
 _rot:
     popd r0
