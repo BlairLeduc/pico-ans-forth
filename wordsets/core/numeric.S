@@ -86,6 +86,8 @@ __number: @ r0 = pointer to string
 _dot:
     popd r0                             @ get number from stack
     bl __dot                            @ convert to string and print
+    mov r0, #32
+    bl __emit
     NEXT
 
     .global __dot
@@ -94,8 +96,6 @@ __dot:
     mov r1, r0
     eor r0, r0
     bl __dot_r
-    mov r0, #32
-    bl __emit
     pop {pc}
 
     .global _dot_r
@@ -175,6 +175,8 @@ __dot_r: @ r0 = field width, r1 = number to print
 _u_dot:
     popd r0                             @ get number from stack
     bl __u_dot                            @ convert to string and print
+    mov r0, #32
+    bl __emit
     NEXT
 
     .global __u_dot
@@ -183,8 +185,6 @@ __u_dot:
     mov r1, r0
     eor r0, r0
     bl __u_dot_r
-    mov r0, #32
-    bl __emit
     pop {pc}
 
     .global _u_dot_r

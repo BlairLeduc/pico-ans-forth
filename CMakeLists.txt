@@ -34,9 +34,7 @@ project(pico-ans-forth C CXX ASM)
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
 
-# Add executable. Default name is the project name, version 0.1
-
-add_executable(pico-ans-forth
+set(FORTH_SOURCES
     wordsets/block/core.S
     wordsets/core/arithmetic.S
     wordsets/core/character.S
@@ -57,11 +55,29 @@ add_executable(pico-ans-forth
     wordsets/tools/core.S
     dictionary.S
     forth.c
-    forth.S
+    forth.S)
+
+# Add forth.inc as a dependency
+set_source_files_properties(
+    ${CMAKE_CURRENT_SOURCE_DIR}/forth.inc
+    PROPERTIES HEADER_FILE_ONLY TRUE
+)
+
+# Make sure targets depending on forth.inc are rebuilt when it changes
+set_property(
+    SOURCE ${FORTH_SOURCES}
+    APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/forth.inc
+)
+
+# Add executable. Default name is the project name
+
+add_executable(pico-ans-forth
+    ${FORTH_SOURCES}
 )
 
 pico_set_program_name(pico-ans-forth "pico-ans-forth")
-pico_set_program_version(pico-ans-forth "0.1")
+pico_set_program_url(pico-ans-forth "https://github.com/BlairLeduc/pico-ans-forth")
+pico_set_program_version(pico-ans-forth "1.0.0-alpha.0")
 
 # Modify the below lines to enable/disable output over UART/USB
 #pico_enable_stdio_uart(pico-ans-forth 0)

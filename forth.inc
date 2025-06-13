@@ -19,9 +19,14 @@
     .set TERMINAL_INPUT_BUFFER_SIZE, 80 @ 80 bytes is standard for the terminal input buffer
     .set S_QUOTED_STRING_BUFFER_SIZE, 80 @ 80 bytes for the S" quoted string buffer
 
-    @ Output formatting
-    .equ CPL, 64                        @ characters per line
+    @ Output formatting (80 characters per line, 16 bytes per row in dump)
+    .equ CPL, 80                        @ characters per line
     .equ BPR, 16                        @ bytes per row in dump
+
+@    @ Output formatting (40 characters per line, 4 bytes per row in dump)
+@    .equ CPL, 40                        @ characters per line
+@    .equ BPR, 4                         @ bytes per row in dump
+
 @
 @   The NEXT macro is used to execute the next instruction stored in the word's data fields.
 @

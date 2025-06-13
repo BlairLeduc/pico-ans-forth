@@ -746,13 +746,13 @@
     defcode "ACCEPT",,ACCEPT,_accept
 
     @   10.6.2.1305 EKEY ( —- u ) [facility ext]
-    @   TODO
+    defcode "EKEY",,EKEY,_key
 
     @   10.6.2.1306 EKEY>CHAR ( u —- u 0 | char -1 ) [facility ext
-    @   TODO
+    defcode "EKEY>CHAR",,EKEY_TO_CHAR,_key_to_char
 
     @   10.6.2.1307 EKEY? ( —- flag ) [facility ext]
-    @   TODO
+    defcode "EKEY?",,EKEYQ,_keyq
 
     @   6.1.1750    KEY ( —- b ) [core]
     defcode "KEY",,KEY,_key
@@ -779,13 +779,13 @@
 @
 
     @   10.6.1.0742 AT-XY ( u1 u2 -- ) [facility]
-    @   TODO
+    defcode "AT-XY",,AT_XY,_at_xy
 
     @   6.1.0990    CR ( —- ) [core]
     defcode "CR",,CR,_cr
 
     @   10.6.1.2005 PAGE ( —- ) [facility]
-    @   TODO
+    defcode "PAGE",,PAGE,_page
 
     @   6.1.2220    SPACE ( —- ) [core]
     defcode "SPACE",,SPACE,_space
@@ -879,6 +879,22 @@
 
     @   6.1.0220    [THEN] ( —- ) [core]
     defcode "[THEN]",CB_PRECEDENCE,BRACKET_THEN,_noop
+
+@
+@   6.2.2 Colon Definitions
+@
+
+    @   6.1.0450    : <name> ( —- ) [core]
+    @defcode ":",CB_PRECEDENCE,COLON,_colon
+
+    @   6.2.0455    :NONAME ( -- xt ) [core ext]
+    @defcode ":NONAME",CB_PRECEDENCE,COLON_NONAME,_colon_noname
+
+    @   6.1.0460    ; ( —- ) [core]
+    @defcode ";",CB_PRECEDENCE,SEMICOLON,_semicolon
+
+    @   6.1.2120    RECURSE ( -- ) [core]
+    @defcode "RECURSE",CB_PRECEDENCE,RECURSE,_recurse
 
 @
 @   4.1.4 Input Number Conversion
