@@ -118,11 +118,13 @@ _words:
     
 1:  @ Print each word
     cmp r4, #0                          @ end of dictionary?
-    beq 4f                              @ yes, done
+    beq 5f                              @ yes, done
     
 2:  @ Print the word
     add r4, #4                          @ Move to name
     ldr r1, [r4], #1
+    ands r2, r1, #CB_SMUDGE
+    bne 4f                              @ skip smudged words
     and r1, #CB_LENGTH                  @ get word name length
     add r5, r1                          @ Add length to char count
     add r5, #1                          @ Add 1 for space
@@ -140,8 +142,8 @@ _words:
     bl __emit
 
     @ Move to next word
-    sub r4, #5                          @ back to start of header
+4:  sub r4, #5                          @ back to start of header
     ldr r4, [r4]                        @ follow link
     b 1b                                @ next word
 
-4:  pop {r4-r6, pc}
+5:  pop {r4-r6, pc}

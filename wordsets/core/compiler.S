@@ -216,16 +216,17 @@ _create:
     add r5, r1
     add r5, #4
     and r5, #~3                         @ align the DP to a 4-byte boundary
-    str r5, [r4]                        @ update DP
     ldr r0, =_parameterField
     str r0, [r5], #4
+    str r5, [r4]                        @ update DP
     pushd r5                            @ push the address of the parameter field onto the data stack
     pop {r4-r5}
     NEXT
 
     .global _parameterField
 _parameterField:
-    pushd r5
+    add r1, r0, #4                    @ move to the data field
+    pushd r1
     NEXT
 
 
