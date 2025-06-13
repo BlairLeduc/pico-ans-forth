@@ -91,7 +91,7 @@ forth_start:
     
     .section .rodata
 welcome_message:
-    .ascii "Welcome to ANS Forth on the Pico 2!\x0D"
+    .ascii "\x0DWelcome to ANS Forth on the Pico 2!\x0D"
     .ascii "Copyright Blair Leduc.\x0D"
     .asciz "Version 1.0.0-alpha.0\x0D"
 
@@ -141,8 +141,8 @@ __check_stacks:
     bmi 6f
     mov r0, #ERR_FLOAT_STACK_OVERFLOW
     bx lr
-6:  movw r0, :lower16:data_space_bottom  @ check for data space overflow
-    movt r0, :upper16:data_space_bottom
+6:  movw r0, :lower16:data_space_top  @ check for data space overflow
+    movt r0, :upper16:data_space_top
     movw r1, :lower16:var_LATEST
     movt r1, :upper16:var_LATEST
     ldr r1, [r1]                        @ get the address of LATEST
@@ -195,10 +195,10 @@ float_stack_top:                        @ initial top of float stack
 
     @ Forth data space
     .balign 4
-    .global data_space, data_space_bottom
+    .global data_space, data_space_top
 data_space:
     .space DATA_SPACE_SIZE
-data_space_bottom:                      @ bottom of data space
+data_space_top:                      @ bottom of data space
     .space 8                            @ reserve space for the bottom of the data space pointer in case of overflow
 
     @ Forth Pad Storage

@@ -202,7 +202,7 @@ void __type_error(int error_code)
             }
             else
             {
-                __type_cstr("\x0D  Application error: \x0D");
+                __type_cstr("\x0D  Application error: ");
                 __type_cstr(error_code_str);
                 __type_cstr("\x0D");
             }

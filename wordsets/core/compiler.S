@@ -159,22 +159,86 @@ _zbranch:
     ldr r0, [r5], #4
     NEXT
 
+    @   6.1.0710    ALLOT ( n -- )
+    @
+    @   If n is greater than zero, reserve n address units of data space. If n is less than zero, release |n|
+    @   address units of data space. If n is zero, leave the data-space pointer unchanged.
+    @
+    @   If the data-space pointer is aligned and n is a multiple of the size of a cell when ALLOT begins
+    @   execution, it will remain aligned when ALLOT finishes execution.
+    @
+    @   If the data-space pointer is character aligned and n is a multiple of the size of a character when
+    @   ALLOT begins execution, it will remain character aligned when ALLOT finishes execution.
+
     .global _allot
 _allot:
-    popd r0                             @ Get the number of bytes to allot
-    movw r1, :lower16:var_DP            @ Load the address of DP
+    popd r0                             @ get the number of bytes to allot
+    movw r1, :lower16:var_DP
     movt r1, :upper16:var_DP
-    ldr r2, [r1]                        @ Get the current value of DP
-    add r2, r0                          @ Add the number of bytes to allot
-    str r2, [r1]                        @ Update DP with the new value
+    ldr r2, [r1]                        @ get the current value of the DP
+    mov r3, r2
+    and r3, #3                          @ flag if the DP needs to be aligned to a 4-byte boundary
+    add r2, r0                          @ add the number of bytes to the DP
+    cmp r3, #0
+    beq 1f                              @ should the DP be aligned? skip the alignment adjustment
+    add r2, #3
+    and r2, #~3                         @ align the DP to the next 4-byte boundary
+1:  str r2, [r1]                        @ update DP with the new value
     NEXT
+
+
+    @   6.1.1000 CREATE ( “<spaces>name” -- )
+    @
+    @   Skip leading space delimiters. Parse name delimited by a space. Create a definition for name
+    @   with the execution semantics defined below. If the data-space pointer is not aligned, reserve
+    @   enough data space to align it. The new data-space pointer defines name’s data field. CREATE
+    @   does not allocate data space in name’s data field.
+    @
+    @   name Execution: ( -- a-addr )
+    @       a-addr is the address of name’s data field. The execution semantics of name may be extended
+    @       by using DOES>.
+
+    .global _create
+_create:
+    push {r4-r5}
+    ldr r4, =var_DP
+    ldr r5, [r4]                        @ get the current value of DP
+    eor r0, r0
+    str r0, [r5], #4                    @ store the locate field (0)
+    ldr r0, =var_LATEST
+    ldr r1, [r0]                        @ get the address of LATEST
+    str r1, [r5]                        @ store the link field (address of the previous word)
+    str r5, [r0]                        @ update LATEST to point to the new word
+    add r5, #4                          @ move to the name field
+    str r5, [r4]                        @ update DP
+    mov r0, #0x20                       @ ASCII ' '
+    bl __word                           @ parse the name
+    add r5, r1
+    add r5, #4
+    and r5, #~3                         @ align the DP to a 4-byte boundary
+    str r5, [r4]                        @ update DP
+    ldr r0, =_parameterField
+    str r0, [r5], #4
+    pushd r5                            @ push the address of the parameter field onto the data stack
+    pop {r4-r5}
+    NEXT
+
+    .global _parameterField
+_parameterField:
+    pushd r5
+    NEXT
+
+
+    @   6.2.2395    UNUSED ( -- u )
+    @
+    @   u is the amount of space remaining in the region addressed by HERE , in address units.
 
     .global _unused
 _unused:
-    movw r0, :lower16:var_DP            @ Load the address of DP
+    movw r0, :lower16:var_DP
     movt r0, :upper16:var_DP
-    movw r1, :lower16:data_space_bottom @ Load the address of the bottom of data space
-    movt r1, :upper16:data_space_bottom
+    movw r1, :lower16:data_space_top
+    movt r1, :upper16:data_space_top
     ldr r2, [r0]                        @ Get the current value of DP
     subs r2, r1, r2                     @ Subtract the bottom of data space from DP
     pushd r2                            @ Push the result onto the data stack

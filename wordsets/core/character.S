@@ -52,20 +52,21 @@ _fill:
 
     .global _move
 _move:
-    popd r0                             @ count (u)
-    popd r1                             @ destination addr (addr2)
-    popd r2                             @ source addr (addr1)
+    popd r1                             @ count (u)
+    popd r2                             @ destination addr (addr2)
+    popd r0                             @ source addr (addr1)
     bl __move
     NEXT
 
-
+    @   Copy a block of bytes from source to destination.
+    @   r0 = source address, r1 = count (u), r2 = destination addr
     .global __move
-__move: @ r0 = count (u), r1 = destination addr, r2 = source addr
-1:  cmp r0, #0
+__move:
+1:  cmp r1, #0
     beq 2f
-    ldrb r3, [r2], #1                   @ load byte from source, increment
-    strb r3, [r1], #1                   @ store byte to dest, increment
-    sub r0, #1
+    ldrb r3, [r0], #1                   @ load byte from source, increment
+    strb r3, [r2], #1                   @ store byte to dest, increment
+    sub r1, #1
     b 1b
 2:  bx lr
 
@@ -132,8 +133,6 @@ __word: @ r0 = delimiter (usually space)
     cmp r2, r0
     bne 2b
 
-    @sub r6, #1                          @ adjust for delimiter
-
 4:  @ Update >IN and create counted string
     movw r3, :lower16:var_TOIN
     movt r3, :upper16:var_TOIN
@@ -148,29 +147,54 @@ __word: @ r0 = delimiter (usually space)
     bx lr   @ r0 = address of the word, r1 = length (saves a ldr in the caller)
 
 
+    @.  6.1.2165    S" “s-quote”
+    @
+    @   Compilation: ( “ccc<quote>” -- )
+    @       Parse ccc delimited by " (double-quote). Append the run-time semantics given below to the
+    @       current definition.
+    @   Run-time: ( -- c-addr u )
+    @       Return c-addr and u describing a string consisting of the characters ccc. A program shall not
+    @       alter the returned string.
+
     .global _s_quote
 _s_quote:
-    push {r4-r5}
-    movw r4, :lower16:s_quoted_string_buffer
-    movt r4, :upper16:s_quoted_string_buffer
-
     mov r0, #0x22                       @ ASCII '"'
     eor r1, r1                          @ skip leading spaces
     bl __parse
-    mov r5, r1
-    mov r2, r0
-    mov r0, r1
-    mov r1, r4
+    ldr r3, =var_STATE
+    ldr r3, [r3]                        @ get the current state
+    cmp r3, #0
+    beq 1f                              @ if in interpretation state, just return the string  
+
+    @ compilation state
+    movw r2, :lower16:var_DP
+    movt r2, :upper16:var_DP
+    ldr r2, [r2]                        @ get the current DP value
+    ldr r3, =SLITERAL
+    str r3, [r2], #4                    @ store SLITERAL
+    str r1, [r2], #1                    @ store the string length
+    push {r1}                           @ save the string length
+    bl __move                           @ move the string from the parse area
+    pop {r1}                            @ restore the string length
+    add r1, #3
+    and r1, #~3                         @ align the length to 4 bytes
+    add r2, r1
+    str r2, [r3]                        @ update DP
+    NEXT
+
+
+    @ interpretation state
+1:  movw r2, :lower16:s_quoted_string_buffer
+    movt r2, :upper16:s_quoted_string_buffer
+    pushd r2
+    pushd r1
     bl __move
-    pushd r4
-    pushd r5
-    pop {r4-r5}
     NEXT
 
 
     .global _dot_quote
 _dot_quote:
-    mov r0, #0x22                       @ ASCII ')'
+    mov r0, #0x22                       @ ASCII '"'
     eor r1, r1                          @ skip leading spaces
     bl __parse
     bl __type

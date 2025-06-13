@@ -924,7 +924,7 @@
     defcode "ALLOT",,ALLOT,_allot
 
     @   6.1.0725    CREATE ( —- a-addr ) [core]
-    @   TODO
+    defcode "CREATE",,CREATE,_create
 
     @   6.2.2395    UNUSED ( —- u ) [core ext]
     defcode "UNUSED",,UNUSED,_unused
@@ -998,8 +998,7 @@
 @
 
     @   17.6.1.2212 SLITERAL ( -— c-addr u ) [string]
-    @   TODO
-
+    defcode "SLITERAL",CB_PRECEDENCE,SLITERAL,_noop @_sliteral
 
 @
 @   4.6.2 Managing Word Lists
@@ -1007,7 +1006,6 @@
 
     @   16.6.2.1590 FORTH ( -- ) [search ext]
     defcode "FORTH",,FORTH,_noop        @ Ignore this, for now
-
 
 @
 @   Internal
