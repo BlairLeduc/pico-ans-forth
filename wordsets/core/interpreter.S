@@ -109,6 +109,16 @@ _lit:
     pushd r0                            @ push the literal number on to the stack
     NEXT
 
+    .global _s_lit
+_s_lit:
+    ldr r0, [r5], #4                    @ r0 = length of the string
+    pushd r5
+    pushd r0                            @ push the address of the string and its length
+    add r5, r0
+    add r5, #3                          @ increment r5 to point to the next command
+    and r5, #~3
+    NEXT
+
 
     .global _parse_word
 _parse_word:
@@ -756,6 +766,7 @@ __find:
     push {r4-r7}
 
     ldr r2, =var_LATEST
+    ldr r2, [r2]                        @ load the address of the latest word in the dictionary
  1: mov r7, r2
     cmp r7, #0                          @ end of dictionary?
     beq 6f
@@ -812,6 +823,57 @@ __find:
     pop {r4-r7}
     bx lr
 
+    
+    .global __find_entry
+__find_entry:
+    push {r4-r7}
+
+    ldr r2, =var_LATEST
+    ldr r2, [r2]                        @ load the address of the latest word in the dictionary
+ 1: mov r7, r2
+    cmp r7, #0                          @ end of dictionary?
+    beq 5f
+    ldrb r1, [r0]                       @ length of the search string
+    add r7, #4                          @ address of the current word's name
+    ldrb r3, [r7], #1                   @ flags + length field of current entry
+    and r3, #CB_SMUDGE|CB_LENGTH        @ name length + smudge flag
+    cmp r3, r1                          @ length is the same? (smudge flag set will corrupt the comparison)
+    bne 6f                              @ no, so skip to next entry.   
+
+    @ same length, compare the names
+    add r6, r0, #1                      @ move past length byte
+2:  ldrb r4, [r6], #1                   @ load char from the search string
+    ldrb r5, [r7], #1                   @ load char from the current entry name
+
+    @ convert search character to uppecase if it's lowercase
+    cmp r4, #'a'
+    blt 3f
+    cmp r4, #'z'
+    bgt 3f
+    sub r4, #32                         @ convert to uppercase by subtracting 32
+
+    @ convert entry name character to uppercase if it's lowercase
+3:  cmp r5, #'a'
+    blt 4f
+    cmp r5, #'z'
+    bgt 4f
+    sub r5, #32                         @ convert to uppercase by subtracting 32
+
+    @ comapre the uppercase characters
+4:  cmp r4, r5
+    bne 6f                              @ not the same, so skip to next entry
+    subs r1, #1
+    bne 2b                              @ if not zero, continue comparing characters    
+    
+    @ the search string matches the current entry
+5:  mov r0, r2
+    pop {r4-r7}                         @ return to caller
+    bx lr
+
+    @ not the same, so check the next entry
+6:  ldr r2, [r2]                        @ move to the previous word
+    b 1b
+
 
     .global __tcfa
 __tcfa:
@@ -821,7 +883,7 @@ __tcfa:
     add r0, r1                          @ r0 = address of the code field
     add r0, #3                          @ The codeword is 4-byte aligned.
     and r0, #~3
-    blx lr                              @ return to caller
+    bx lr                               @ return to caller
 
 @
 @   Input source state

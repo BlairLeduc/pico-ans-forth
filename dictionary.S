@@ -1033,6 +1033,8 @@
 
     defcode "LIT",,LIT, _lit
 
+    defcode "SLIT",,S_LIT, _s_lit
+
     @   DOCOL [core]
     defconst "DOCOL",DOCOL,_docol
 

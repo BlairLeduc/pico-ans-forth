@@ -206,15 +206,16 @@ _create:
 
     .global __create
 __create:
-    push {r4-r5, lr}
+    push {r4-r7, lr}
+
     ldr r4, =var_DP
     ldr r5, [r4]                        @ get the current value of DP
     eor r0, r0
     str r0, [r5], #4                    @ store the locate field (0)
-    ldr r0, =var_LATEST
-    ldr r1, [r0]                        @ get the address of LATEST
-    str r1, [r5]                        @ store the link field (address of the previous word)
-    str r5, [r0]                        @ update LATEST to point to the new word
+    ldr r6, =var_LATEST
+    ldr r7, [r6]                        @ get the address of LATEST
+    str r7, [r5]                        @ store the link field (address of the previous word)
+    mov r7, r5                          @ save the update to LATEST
     add r5, #4                          @ move to the name field
     str r5, [r4]                        @ update DP
     mov r0, #0x20                       @ ASCII ' '
@@ -222,11 +223,32 @@ __create:
     add r5, r1
     add r5, #4
     and r5, #~3                         @ align the DP to a 4-byte boundary
-    ldr r0, =_parameterField
-    str r0, [r5], #4
-    str r5, [r4] 
+    ldr r2, =_parameterField
+    str r2, [r5], #4
+    str r5, [r4]
+    mov r0, r7
+    add r0, #4
+    bl __find_entry
+    cmp r0, #0                          @ check if the word was found, if not, exit
+    beq 1f                              @ if not found, exit
+    mov r0, #0x0D
+    bl __emit
+    mov r0, r7
+    ldrb r1, [r0, #4]!                  @ get the length/flags byte
+    and r1, #CB_LENGTH                  @ get the length of the name
+    add r0, #1
+    bl __type
+    ldr r0, =msg_not_unique
+    ldr r1, =msg_not_unique_len
+    bl __type
+1:  str r7, [r6]                        @ update LATEST to point to the new word
     mov r0, r5                          @ set r0 to the address of the parameter field 
-    pop {r4-r5, pc}
+    pop {r4-r7, pc}
+
+    .equ msg_not_unique_len, 15
+msg_not_unique:
+    .ascii " isn't unique. "
+    .balign 4
 
     .global _parameterField
 _parameterField:

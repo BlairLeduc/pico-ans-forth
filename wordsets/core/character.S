@@ -167,21 +167,20 @@ _s_quote:
     beq 1f                              @ if in interpretation state, just return the string  
 
     @ compilation state
-    movw r2, :lower16:var_DP
-    movt r2, :upper16:var_DP
+    ldr r2, =var_DP
     ldr r2, [r2]                        @ get the current DP value
-    ldr r3, =SLITERAL
+    ldr r3, =S_LIT
     str r3, [r2], #4                    @ store SLITERAL
-    str r1, [r2], #1                    @ store the string length
-    push {r1}                           @ save the string length
+    str r1, [r2], #4                    @ store the string length
+    push {r1-r2}                        @ save the string length
     bl __move                           @ move the string from the parse area
-    pop {r1}                            @ restore the string length
-    add r1, #3
-    and r1, #~3                         @ align the length to 4 bytes
+    pop {r1-r2}                         @ restore the string length
     add r2, r1
+    add r2, #3
+    and r2, #~3                         @ align the length to 4 bytes
+    ldr r3, =var_DP
     str r2, [r3]                        @ update DP
     NEXT
-
 
     @ interpretation state
 1:  movw r2, :lower16:s_quoted_string_buffer
@@ -197,5 +196,29 @@ _dot_quote:
     mov r0, #0x22                       @ ASCII '"'
     eor r1, r1                          @ skip leading spaces
     bl __parse
-    bl __type
+    ldr r3, =var_STATE
+    ldr r3, [r3]                        @ get the current state
+    cmp r3, #0
+    beq 1f                              @ if in interpretation state, just return the string  
+    
+    @ compilation state
+    ldr r2, =var_DP
+    ldr r2, [r2]                        @ get the current DP value
+    ldr r3, =S_LIT
+    str r3, [r2], #4                    @ store SLITERAL
+    str r1, [r2], #4                    @ store the string length
+    push {r1-r2}                        @ save the string length
+    bl __move                           @ move the string from the parse area
+    pop {r1-r2}                         @ restore the string length
+    add r2, r1
+    add r2, #3
+    and r2, #~3                         @ align the length to 4 bytes
+    ldr r3, =TYPE
+    str r3, [r2], #4                    @ store TYPE
+    ldr r3, =var_DP
+    str r2, [r3]                        @ update DP
+    NEXT
+
+    @ interpretation state
+1:  bl __type
     NEXT
