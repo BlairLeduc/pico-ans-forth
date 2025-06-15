@@ -233,6 +233,8 @@ __create:
     beq 1f                              @ if not found, exit
     mov r0, #0x0D
     bl __emit
+    mov r0, #0x0A
+    bl __emit
     mov r0, r7
     ldrb r1, [r0, #4]!                  @ get the length/flags byte
     and r1, #CB_LENGTH                  @ get the length of the name
