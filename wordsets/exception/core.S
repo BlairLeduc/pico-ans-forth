@@ -1,5 +1,5 @@
 @
-@   Leduc Forth - a simple FORTH compiler/interpreter for the ClockWork PicoCalc
+@   ANS Forth for the Pico 2
 @   Copyright Blair Leduc.
 @   See LICENSE for details.
 @
@@ -15,7 +15,7 @@ _catch:
     popd r0
     pushr r5                            @ save instruction pointer after CATCH   
     pushr r7                            @ save floating point stack pointer
-    eor r1, r1
+    mov r1, #-1                         @ mark the exception frame with -1
     pushr r1                            @ push 0 to mark exception frame
     ldr r1, =catch_return
     pushr r1                            @ push the return address
@@ -43,10 +43,10 @@ _throw:
     @ Find the top-mode exception frame
 1:  movw r1, :lower16:return_stack_top
     movt r1, :upper16:return_stack_top
-2:  cmp r8, r1
+2:  cmp r6, r1
     bge 3f                              @ if the return stack is empty, no exception frame
     popr r2
-    cmp r2, #0                          @ the exception frame starts with a 0 value   
+    cmp r2, #-1                         @ the exception frame starts with a 0 value   
     bne 2b
 
     @ We have an exception frame, so we can return to the CATCH

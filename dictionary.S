@@ -1,5 +1,5 @@
 @
-@   Leduc Forth - a simple FORTH compiler/interpreter for the ClockWork PicoCalc
+@   ANS Forth for the Pico 2
 @   Copyright Blair Leduc.
 @   See LICENSE for details.
 @
@@ -1031,15 +1031,15 @@
 
     defcode "0BRANCH",,ZBRANCH, _zbranch
 
-    defcode "LIT",,LIT, _lit
+    defcode "(LITERAL)",,LIT, _lit
 
-    defcode "SLIT",,S_LIT, _s_lit
+    defcode "(SLITERAL)",,S_LIT, _s_lit
 
     @   DOCOL [core]
-    defconst "DOCOL",DOCOL,_docol
+    @defconst "DOCOL",DOCOL,_docol
 
     @   DODOES [core]
-    defconst "DODOES",DODOES,_dodoes
+    @defconst "DODOES",DODOES,_dodoes
 
     @   R0                              The address of the top of the return stack.
     defconst "R0",RZ,return_stack_top

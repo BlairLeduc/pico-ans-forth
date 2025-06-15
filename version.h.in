@@ -1,0 +1,12 @@
+//
+//  ANS Forth for the Pico 2
+//  Copyright Blair Leduc.
+//  See LICENSE for details.
+//
+
+#ifndef VERSION_H
+#define VERSION_H
+
+#define PICO_ANS_FORTH_VERSION "@PICO_ANS_FORTH_VERSION@"
+
+#endif // VERSION_H

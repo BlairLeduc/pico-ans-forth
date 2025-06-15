@@ -332,9 +332,9 @@ _quit:
     b _quit
 
 ok_prompt:
-    .asciz " ok\x0D"
+    .asciz " ok\015\012"
 compile_prompt:
-    .asciz "\x0D    "
+    .asciz "\015\012  "
     .balign 4
 
     .global _execute
@@ -540,7 +540,7 @@ not_found:
 
     .balign 4
 not_found_error:
-    .asciz " ?\x0D"
+    .asciz " ?\015\012"
     .balign 4
 
     

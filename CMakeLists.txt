@@ -25,6 +25,7 @@ endif()
 # ====================================================================================
 set(PICO_BOARD pico2_w CACHE STRING "Board type")
 set(PICO_DEOPTIMIZED_DEBUG ON)      # Disable optimizations.
+set(PICO_ANS_FORTH_VERSION "1.0.0-alpha.2")
 
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)
@@ -77,19 +78,24 @@ add_executable(pico-ans-forth
 
 pico_set_program_name(pico-ans-forth "pico-ans-forth")
 pico_set_program_url(pico-ans-forth "https://github.com/BlairLeduc/pico-ans-forth")
-pico_set_program_version(pico-ans-forth "1.0.0-alpha.0")
+pico_set_program_version(pico-ans-forth "${PICO_ANS_FORTH_VERSION}")
 
 # Modify the below lines to enable/disable output over UART/USB
 #pico_enable_stdio_uart(pico-ans-forth 0)
 #pico_enable_stdio_usb(pico-ans-forth 0)
 
+configure_file(version.h.in version.h)
+
 # Add the standard library to the build
 target_link_libraries(pico-ans-forth
-        pico_stdlib hardware_uart)
+        pico_stdlib
+        hardware_uart
+)
 
 # Add the standard include files to the build
 target_include_directories(pico-ans-forth PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}
+        ${CMAKE_CURRENT_BINARY_DIR}
 )
 
 pico_add_extra_outputs(pico-ans-forth)

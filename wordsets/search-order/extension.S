@@ -1,5 +1,5 @@
 @
-@   Leduc Forth - a simple FORTH compiler/interpreter for the ClockWork PicoCalc
+@   ANS Forth for the Pico 2
 @   Copyright Blair Leduc.
 @   See LICENSE for details.
 @

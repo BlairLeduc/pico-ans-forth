@@ -47,6 +47,8 @@ __cr:
     push {lr}
     mov r0, #0x0d                       @ ASCII carriage return (0x0d)
     bl __emit
+    mov r0, #0x0a                       @ ASCII line feed (0x0a)
+    bl __emit
     pop {pc}
 
     .global _space

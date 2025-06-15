@@ -1,4 +1,4 @@
-# Pico ANS Forth
+# ANS Forth for the Pico 2
 
 This hobby project is ANS Forth for the [Raspberry Pi Pico 2 (W)](https://www.raspberrypi.com/products/raspberry-pi-pico-2/).
 

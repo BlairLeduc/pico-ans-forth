@@ -1,5 +1,5 @@
 @
-@   Leduc Forth - a simple FORTH compiler/interpreter for the ClockWork PicoCalc
+@   ANS Forth for the Pico 2
 @   Copyright Blair Leduc.
 @   See LICENSE for details.
 @
@@ -80,22 +80,13 @@ bootstrap:
     .global forth_start
 forth_start:
     @ print welcome message
-    ldr r0, =welcome_message
-    bl __type_cstr
+    bl __type_welcome
 
     @ Bootstrap the interpreter
     movw r5, :lower16:bootstrap
     movt r5, :upper16:bootstrap
 
     NEXT                                @ run the interpreter!
-    
-    .section .rodata
-welcome_message:
-    .ascii "\x0DWelcome to ANS Forth on the Pico 2!\x0D"
-    .ascii "Copyright Blair Leduc.\x0D"
-    .asciz "Version 1.0.0-alpha.0\x0D"
-
-
 
 @
 @   System Support
