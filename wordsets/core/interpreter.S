@@ -1,5 +1,5 @@
 @
-@   Leduc Forth - a simple FORTH compiler/interpreter for the PicoCalc
+@   ANS Forth for the Pico 2
 @   Copyright Blair Leduc.
 @   See LICENSE for details.
 @
@@ -270,7 +270,7 @@ interpret_error:
     mov r0, r4
     ldrb r1, [r0], #1
     bl __type
-    ldr r0, =not_found_error
+    ldr r0, =__word_not_found_error
     bl __type_cstr
 
     pop {r4-r7, lr}
@@ -470,10 +470,17 @@ _tib:
     pushd R0
     NEXT
 
+
+    @   6.1.0070    ' ( “<spaces>name” -- xt ) “tick”
+    @
+    @   Skip leading space delimiters. Parse name delimited by a space. Find name and return xt, the
+    @   execution token for name. An ambiguous condition exists if name is not found.
+    @   When interpreting, ' xyz EXECUTE is equivalent to xyz.
+    
     .global _tick
 _tick:
     bl __tick
-    pushd r0                            @ push execution token
+    pushd r0                            @ push found execution token
     NEXT
 
     .global __tick
@@ -484,9 +491,9 @@ __tick:
     mov r4, r0                          @ save word address
     mov r5, r1                          @ save word length
     bl __find                           @ find in dictionary
-    cmp r1, #0                          @ found?
-    beq not_found                       @ no, error
-    bl __tcfa                           @ convert to code field address
+    cmp r1, #0
+    beq __word_not_found                @ if not found, branch to error handling
+    bl __to_cfa                         @ convert dictionary entry to code field address
     pop {r4-r5, pc}                     @ return
 
 
@@ -528,18 +535,18 @@ __bracket_undefined:
     pop {pc}
 
 
-not_found:
+__word_not_found:
     pop {r4-r5, lr}
     mov r0, r4                          @ restore word address
     add r0, #1                          @ skip length byte
     mov r1, r5                          @ restore length
     bl __type                           @ print the word
-    ldr r0, =not_found_error            @ load error message
+    ldr r0, =__word_not_found_error     @ load error message
     bl __type_cstr                      @ print it
     b _quit                             @ abort
 
     .balign 4
-not_found_error:
+__word_not_found_error:
     .asciz " ?\015\012"
     .balign 4
 
@@ -554,6 +561,7 @@ not_found_error:
     @
     @   An ambiguous condition exists if [IF] is POSTPONEd, or if the end of the input buffer is
     @   reached and cannot be refilled before the terminating [ELSE] or [THEN] is parsed.
+    
     .global _bracket_if
 _bracket_if:
     popd r0
@@ -875,8 +883,8 @@ __find_entry:
     b 1b
 
 
-    .global __tcfa
-__tcfa:
+    .global __to_cfa
+__to_cfa:
     add r0, #4                          @ r0 = address of the name field   
     ldrb r1, [r0], #1                   @ r1 = flags+length field of current entry
     and r1, #CB_LENGTH                  @ r1 = length of name (remove fields)

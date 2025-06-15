@@ -1,5 +1,5 @@
 @
-@   Leduc Forth - a simple FORTH compiler/interpreter for the PicoCalc
+@   ANS Forth for the Pico 2
 @   Copyright Blair Leduc.
 @   See LICENSE for details.
 @
@@ -12,18 +12,18 @@
 @   Dictionary definition structure
 @
 @   |                  header                          | code field | data fields            |
-@   |   4    |   4    | 1 | 1 | 1 | .. | 1 | 1 | 1 | 1 |     4      |   4    | ...  |   4    | bytes (aligned)*
+@   |   4    |   4    | 1 | 1 | 1 | .. | 1 | 1 | 1 | 1 |     4      |   4    | ...  |   4    | bytes (aligned) †
 @   +--------+--------+---+---+---+-..-+---+---+---+---+------------+--------+-...--+--------+
 @   | LOCATE | Link   | b | c | c | .. | c | c | 0 | 0 | a-addr     | x      | ...  | x      |
 @   +-^------+-^------+-^-+---+---+-..-+---+---+---+---+------------+--------+-...--+--------+
-@     |        |        |                      |  pad  | <- to align code field*
+@     |        |        |                      |  pad  | <- to align code field †
 @     |        |       control bits/name length
 @     |        |
 @     |       Link to the previous defined word (points to the link field of the previous word)
 @     |
-@    Locates the source code of the word (Link - 4 bytes)
+@    Locates the source code of the word
 @
-@   * Allignment is to a 4 byte boundary
+@   † Allignment is to a 4-byte boundary
 
 
 
@@ -69,10 +69,10 @@
 
     .section .text
 
-    @   6.1.0150 , ( x -- ) “comma”
+    @   6.1.0150    , ( x -- )                          “comma”
     @
     @   Reserve one cell of data space and store x in the cell. If the data-space pointer is aligned when
-    @   ","" begins execution, it will remain aligned when "," finishes execution. An ambiguous condition
+    @   "," begins execution, it will remain aligned when "," finishes execution. An ambiguous condition
     @   exists if the data-space pointer is not aligned prior to execution of ",".
 
     .global _comma
@@ -91,7 +91,7 @@ __comma:
     bx lr
 
 
-    @   6.1.2540 ] ( -- ) “right-bracket”
+    @   6.1.2540    ] ( -- )                            “right-bracket”
     @
     @   Enter compilation state.
 
@@ -104,7 +104,7 @@ _rbrac:
     NEXT
 
 
-    @   6.1.2500 [ “left-bracket”
+    @   6.1.2500 [                                      “left-bracket”
     @
     @   Compilation:
     @       Perform the execution semantics given below.
@@ -120,7 +120,7 @@ _lbrac:
     NEXT
 
 
-    @   6.1.2510 ['] "bracket-tick"
+    @   6.1.2510 [']                                    "bracket-tick"
     @
     @   Compilation: ( “<spaces>name” -- )
     @       Skip leading space delimiters. Parse name delimited by a space. Find name. Append the run-
@@ -332,7 +332,7 @@ _semicolon:
 _recurse:
     ldr r1, =var_LATEST
     ldr r0, [r1]                        @ Get the address of LATEST
-    bl __tcfa
+    bl __to_cfa
     ldr r2, =var_DP
     ldr r3, [r2]                        @ Get the current value of DP
     str r0, [r3], #4                    @ Store the address of the current definition in the code field

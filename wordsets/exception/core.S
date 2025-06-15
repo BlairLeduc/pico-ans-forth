@@ -36,10 +36,17 @@ catch_return:
     .global _throw
 _throw:
     popd r0
+    bl __throw
+    NEXT
+
+    .global __throw
+__throw:
     cmp r0, #0
     bne 1f  
-    NEXT                     
+    bx lr                               @ No exception, return to caller                    
     
+    push {r4-r7, lr}
+
     @ Find the top-mode exception frame
 1:  movw r1, :lower16:return_stack_top
     movt r1, :upper16:return_stack_top
@@ -53,17 +60,20 @@ _throw:
     popr r7                             @ load floating point stack pointer
     popr r5                             @ load instruction pointer after CATCH
     pushd r0   
-    NEXT
+    pop {r4-r7, pc}
 
 3:  @ No exception frame, abort
     cmp r0, #-1
-beq 5f                              @ if r0 is -1, abort, no message
+    beq 5f                              @ if r0 is -1, abort, no message
     cmp r0, #-2
     bne 4f                              @ if r0 is not -2, display the error message   
     @ if r0 is -2, abort with message  
     popd r1                             @ pop the message length                           
     popd r0                             @ pop the message address
     bl __type
+    pop {r4-r7, lr}
     b _quit                             @ ABORT
+
 4:  bl __type_error                     @ deplay the error message
-5:  b _quit                             @ ABORT
+5:  pop {r4-r7, lr}
+    b _quit                             @ ABORT

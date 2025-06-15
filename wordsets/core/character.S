@@ -1,5 +1,5 @@
 @
-@   Leduc Forth - a simple FORTH compiler/interpreter for the PicoCalc
+@   ANS Forth for the Pico 2
 @   Copyright Blair Leduc.
 @   See LICENSE for details.
 @
@@ -191,6 +191,14 @@ _s_quote:
     NEXT
 
 
+    @   6.1.0190    ."                                  “dot-quote”
+    @   
+    @   Compilation: ( “ccc<quote>” -- )
+    @       Parse ccc delimited by " (double-quote). Append the run-time semantics given below to the
+    @       current definition.
+    @   Run-time: ( -- )
+    @       Display ccc.
+
     .global _dot_quote
 _dot_quote:
     mov r0, #0x22                       @ ASCII '"'
@@ -201,7 +209,7 @@ _dot_quote:
     cmp r3, #0
     beq 1f                              @ if in interpretation state, just return the string  
     
-    @ compilation state
+    @ compilation
     ldr r2, =var_DP
     ldr r2, [r2]                        @ get the current DP value
     ldr r3, =S_LIT
@@ -219,6 +227,6 @@ _dot_quote:
     str r2, [r3]                        @ update DP
     NEXT
 
-    @ interpretation state
+    @ run-time
 1:  bl __type
     NEXT

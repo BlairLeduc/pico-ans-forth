@@ -33,7 +33,11 @@
 @   1.4.1 Comments (FPH, p22)
 @
 
-    @   6.2.0200    ( ( -- ) [core]
+    @   6.2.0200    ( ( “ccc<paren>” -- ) "paren" [core]
+    @
+    @   Parse ccc delimited by ) (right parenthesis). ( is an immediate word.
+    @   The number of characters in ccc may be zero to the number of characters in the parse area.
+
     defword "(",CB_PRECEDENCE,COMMENT
     .word LIT, ')'
     .word PARSE
@@ -222,15 +226,23 @@
     @   6.1.0160    - ( n1 n2 —- n3 ) [core]
     defcode "-",,SUB,_sub
 
-    @   6.1.0230    / ( n1 n2 —- n3 ) [core]
+
+    @   6.1.0230    / ( n1 n2 —- n3 ) “slash” [core]
+    @
+    @   Divide n1 by n2, giving the single-cell quotient n3. An ambiguous condition exists if n2 is zero.
+    @   If n1 and n2 differ in sign, the implementation-defined result returned will be the same as that
+    @   returned by either the phrase >R S>D R> FM/MOD SWAP DROP or the phrase >R S>D R>
+    @   SM/REM SWAP DROP.
+
     defword "/",,DIVIDE
     .word DIVMOD
     .word SWAP
     .word DROP
     .word EXIT
 
+
     @   6.1.0240    /MOD ( n1 n2 —- n3 n4 ) [core]
-    defcode "/MOD",,DIVMOD,_divmod
+    defcode "/MOD",,DIVMOD,_slash_mod
 
     @   6.1.0290    1+ ( n1 —- n2 ) [core]
     defcode "1+",,INCR,_incr

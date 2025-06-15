@@ -126,12 +126,22 @@ _swap:
     pushd r1
     NEXT
 
+
+    @   6.1.0010    ! ( x a-addr -- )                   “store”
+    @
+    @   Store x at a-addr.
+
     .global _store
 _store:
     popd r0
     popd r1
     str r1, [r0]
     NEXT
+
+
+    @   6.1.0130    +! ( n|u a-addr -- )                “plus-store”
+    @   
+    @   Add n|u to the single-cell number at a-addr.
 
     .global _addstore
 _addstore:

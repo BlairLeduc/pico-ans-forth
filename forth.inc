@@ -276,20 +276,24 @@ var_\label:                             @ DFA for the variable
 @   Error Codes
 @
 
-    .equ ERR_OK,                     0
-    .equ ERR_ABORT,                 -1
-    .equ ERR_ABORT_QUOTE,           -2
-    .equ ERR_STACK_OVERFLOW,        -3
-    .equ ERR_STACK_UNDERFLOW,       -4
-    .equ ERR_RETURN_STACK_OVERFLOW, -5
-    .equ ERR_RETURN_STACK_UNDERFLOW,-6
-    .equ ERR_TOO_DEEP_NESTING,      -7
-    .equ ERR_DICTIONARY_FULL,       -8
-    .equ ERR_DIVIDE_BY_ZERO,        -10
-    .equ ERR_UNDEFINED_WORD,        -13
-    .equ ERR_COMPILE_ONLY_WORD,     -14
-    .equ ERR_RETURN_STACK_IMBALANCE,-25 
-    .equ ERR_USER_INTERRUPT,        -28
-    .equ ERR_FLOAT_STACK_OVERFLOW,  -44
-    .equ ERR_FLOAT_STACK_UNDERFLOW, -45
-    .equ ERR_ON_STREAM,             -57
+    .equ ERR_OK,                          0
+    .equ ERR_ABORT,                      -1
+    .equ ERR_ABORT_QUOTE,                -2
+    .equ ERR_STACK_OVERFLOW,             -3
+    .equ ERR_STACK_UNDERFLOW,            -4
+    .equ ERR_RETURN_STACK_OVERFLOW,      -5
+    .equ ERR_RETURN_STACK_UNDERFLOW,     -6
+    .equ ERR_TOO_DEEP_NESTING,           -7
+    .equ ERR_DICTIONARY_FULL,            -8
+    .equ ERR_INVALID_MEMORY_ADDRESS,     -9
+    .equ ERR_DIVIDE_BY_ZERO,            -10
+    .equ ERR_RESULT_OUT_OF_RANGE,       -11
+    .equ ERR_ARGUMENT_TYPE_MISMATCH,    -12
+    .equ ERR_UNDEFINED_WORD,            -13
+    .equ ERR_COMPILE_ONLY_WORD,         -14
+    .equ ERR_INVALID_FORGET,            -15
+    .equ ERR_RETURN_STACK_IMBALANCE,    -25 
+    .equ ERR_USER_INTERRUPT,            -28
+    .equ ERR_FLOAT_STACK_OVERFLOW,      -44
+    .equ ERR_FLOAT_STACK_UNDERFLOW,     -45
+    .equ ERR_ON_STREAM,                 -57

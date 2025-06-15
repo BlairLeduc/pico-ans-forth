@@ -1,5 +1,5 @@
 @
-@   Leduc Forth - a simple FORTH compiler/interpreter for the PicoCalc
+@   ANS Forth for the Pico 2
 @   Copyright Blair Leduc.
 @   See LICENSE for details.
 @
@@ -81,6 +81,11 @@ __number: @ r0 = pointer to string
 
 5:  pop {r4-r5}
     bx lr
+
+
+    @   6.1.0180    . ( n -- )                          “dot”
+    @   
+    @   Display n in free field format.
 
     .global _dot
 _dot:

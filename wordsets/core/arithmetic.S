@@ -1,15 +1,20 @@
 @
-@   Leduc Forth - a simple FORTH compiler/interpreter for the PicoCalc
+@   ANS Forth for the Pico 2
 @   Copyright Blair Leduc.
 @   See LICENSE for details.
 @
-@   This file contains the Standard Forth Core workset (arithmatic)
-@   See 2.2.1 Arithmetic and Shift Operators (FPH, p39)
+@   This file contains the ANS Forth Core workset (arithmatic)
+@   See 2.2.1 Arithmetic and Shift Operators (FPH, p54)
 @
 
     .include "forth.inc"
 
     .section .text
+
+
+    @   6.1.0090    * ( n1|u1 n2|u2 -- n3|u3 )          “star”
+    @
+    @   Multiply n1|u1 by n2|u2 giving the product n3|u3.
 
     .global _mul
 _mul:
@@ -19,6 +24,11 @@ _mul:
     pushd r0
     NEXT
 
+
+    @   6.1.0120    + ( n1|u1 n2|u2 -- n3|u3 )          “plus”
+    @
+    @   Add n2|u2 to n1|u1, giving the sum n3|u3.
+
     .global _add
 _add:
     popd r0
@@ -26,6 +36,11 @@ _add:
     add r0, r1
     pushd r0
     NEXT
+
+
+    @   6.1.0160    - ( n1|u1 n2|u2 -- n3|u3 )          “minus”
+    @   
+    @   Subtract n2|u2 from n1|u1, giving the difference n3|u3.
 
     .global _sub
 _sub:
@@ -35,8 +50,16 @@ _sub:
     pushd r0
     NEXT
 
-    .global _divmod
-_divmod:
+
+    @   6.1.0240    /MOD ( n1 n2 -- n3 n4 )             “slash-mod”
+    @   
+    @   Divide n1 by n2, giving the single-cell remainder n3 and the single-cell quotient n4. An
+    @   ambiguous condition exists if n2 is zero. If n1 and n2 differ in sign, the implementation-defined
+    @   result returned will be the same as that returned by either the phrase >R S>D R> FM/MOD or
+    @   the phrase >R S>D R> SM/REM.
+
+    .global _slash_mod
+_slash_mod:
     popd r0                             @ get the divisor
     popd r1                             @ get dividend
     cmp r0, #0                          @ check for dividion by zero
@@ -54,11 +77,10 @@ _divmod:
     NEXT
 
 1:                                      @ Divide by zero error
-                                        @ TODO: throw an error, ERR_DIVIDE_BY_ZERO, if divide by zero instead
-    eor r0, r0                          @ set r0 to zero
-    pushd r0                            @ push zero for remainder
-    pushd r0                            @ push zero for quotient 
+    mov r0, #ERR_DIVIDE_BY_ZERO
+    bl __throw
     NEXT
+
 
     .global _incr
 _incr:

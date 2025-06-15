@@ -25,7 +25,7 @@ endif()
 # ====================================================================================
 set(PICO_BOARD pico2_w CACHE STRING "Board type")
 set(PICO_DEOPTIMIZED_DEBUG ON)      # Disable optimizations.
-set(PICO_ANS_FORTH_VERSION "1.0.0-alpha.2")
+set(PICO_ANS_FORTH_VERSION "1.0.0-alpha.3")
 
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)
