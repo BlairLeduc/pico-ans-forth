@@ -8,5 +8,5 @@
 
     .include "forth.inc"
 
-    .section .text
+    .text
     

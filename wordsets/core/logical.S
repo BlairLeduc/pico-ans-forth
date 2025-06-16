@@ -8,9 +8,10 @@
 
     .include "forth.inc"
 
-    .section .text
+    .text
 
     .global _abs
+    .thumb_func
 _abs:
     popd r0
     cmp r0, #0
@@ -20,6 +21,7 @@ _abs:
     NEXT
 
     .global _and
+    .thumb_func
 _and:
     popd r0
     popd r1
@@ -28,6 +30,7 @@ _and:
     NEXT
 
     .global _invert
+    .thumb_func
 _invert:
     popd r0
     mvn r0, r0
@@ -35,6 +38,7 @@ _invert:
     NEXT
 
     .global _max
+    .thumb_func
 _max:
     popd r0
     popd r1
@@ -46,6 +50,7 @@ _max:
     NEXT
 
     .global _min
+    .thumb_func
 _min:
     popd r0
     popd r1
@@ -57,6 +62,7 @@ _min:
     NEXT
 
     .global _negate
+    .thumb_func
 _negate:
     popd r0
     rsb r0, r0, #0                      @ Negate the signed number
@@ -64,6 +70,7 @@ _negate:
     NEXT
 
     .global _or
+    .thumb_func
 _or:
     popd r0
     popd r1
@@ -72,6 +79,7 @@ _or:
     NEXT
 
     .global _within
+    .thumb_func
 _within:
     popd r0                             @ high
     popd r1                             @ low
@@ -87,6 +95,7 @@ _within:
     NEXT
 
     .global _xor
+    .thumb_func
 _xor:
     popd r0
     popd r1
@@ -95,6 +104,7 @@ _xor:
     NEXT
 
     .global _zlt
+    .thumb_func
 _zlt:
     popd r0
     cmp r0, #0
@@ -105,6 +115,7 @@ _zlt:
     NEXT
 
     .global _znequ
+    .thumb_func
 _znequ:
     popd r0
     cmp r0, #0
@@ -115,6 +126,7 @@ _znequ:
     NEXT
 
     .global _zequ
+    .thumb_func
 _zequ:
     popd r0
     cmp r0, #0
@@ -125,6 +137,7 @@ _zequ:
     NEXT
 
     .global _zgt
+    .thumb_func
 _zgt:
     popd r0
     cmp r0, #0
@@ -135,6 +148,7 @@ _zgt:
     NEXT
 
     .global _lt
+    .thumb_func
 _lt:
     popd r0
     popd r1
@@ -146,6 +160,7 @@ _lt:
     NEXT
 
     .global _nequ
+    .thumb_func
 _nequ:
     popd r0
     popd r1
@@ -157,6 +172,7 @@ _nequ:
     NEXT
 
     .global _equ
+    .thumb_func
 _equ:
     popd r0
     popd r1
@@ -168,6 +184,7 @@ _equ:
     NEXT
 
     .global _gt
+    .thumb_func
 _gt:
     popd r0
     popd r1
@@ -179,18 +196,21 @@ _gt:
     NEXT
 
     .global _false
+    .thumb_func
 _false:
     mov r0, #0
     pushd r0
     NEXT
 
     .global _true
+    .thumb_func
 _true:
     mov r0, #-1
     pushd r0
     NEXT
 
     .global _ult
+    .thumb_func
 _ult:
     popd r0
     popd r1
@@ -202,6 +222,7 @@ _ult:
     NEXT
 
     .global _ugt
+    .thumb_func
 _ugt:
     popd r0
     popd r1

@@ -8,9 +8,10 @@
 
     .include "forth.inc"
 
-    .section .text   
+    .text   
 
     .global _dot_s
+    .thumb_func
 _dot_s:
     push {r4-r5, lr}
     movw r4, :lower16:data_stack_top
@@ -31,6 +32,7 @@ top_message:
     .balign 4
 
     .global _dump
+    .thumb_func
 _dump:
     popd r0                             @ r0 = number of bytes to dump
     popd r1                             @ r1 = address to dump
@@ -38,6 +40,7 @@ _dump:
     NEXT
 
     .global __dump
+    .thumb_func
 __dump: @ r0 = count, r1 = address
     push {r4-r7, lr}
     mov r4, r1                          @ save address
@@ -105,6 +108,7 @@ __dump: @ r0 = count, r1 = address
 
 
     .global _words
+    .thumb_func
 _words:
     push {r4-r6, lr}
     

@@ -8,7 +8,6 @@
 
     .syntax unified
     .cpu cortex-m33
-    .thumb_func
 
     @ Define the initial size of the stacks and storage space.
     .set DATA_STACK_SIZE, 512           @ 128 cells for the data stack
@@ -31,7 +30,7 @@
 @   The NEXT macro is used to execute the next instruction stored in the word's data fields.
 @
 @   We use indirect threaded code that is excuted using the DOCOL interpreter. The DOCOL interpreter
-@   executes each execution token stored in the data fields of the word. 
+@   executes each execution token stored in the data fields of the word.
 @
 
     .macro NEXT
@@ -93,13 +92,13 @@
 @
 @   Create a "compiled" (DOCOL) definition for a word in the dictionary.
 @
-@   This dictionary definition is stored in the .rodata section, which is read-only.
+@   This dictionary definition is stored in the .section .rodata section, which is read-only.
 @   The code field points to the DOCOL interpreter.
 @
 @   Example: : DOUBLE DUP + ;
 @                                                               first execution token in definition
 @   +--------+--------+---+---+---+---+---+---+---+---+--------+-|------+--------+--------+
-@   | LOCATE | LINK   | 6 | D | O | U | B | L | E | 0 | _docol | DUP    | +      | EXIT   |
+@   | LOCATE | LINK   | 6 | D | O | U | B | L | E | 0 | DOCOL  | DUP    | +      | EXIT   |
 @   +--------+--------+---+---+---+---+---+---+---+---+-|------+--------+--------+--------+
 @                                                      points to the DOCOL interpreter.
 
@@ -114,8 +113,8 @@
     .ascii "\name"                      @ the name
 3:
     .balign 4                           @ pad with 0's to next 4 byte boundary
-    .global \label                             
-\label:                                 @ CFA for the word   
+    .global \label
+\label:                                 @ CFA for the word
     .word _docol                        @ code field - points to the DOCOL interpreter
 
     .set link, 1b
@@ -126,7 +125,7 @@
 @
 @   Create a code definition for a word in the dictionary.
 @
-@   This dictionary definition is stored in the .rodata section, which is read-only.
+@   This dictionary definition is stored in the .section .rodata section, which is read-only.
 @   The code field points to the assembly code that implements the behaviour of the word
 @   which is stored in the .text section.
 @
@@ -154,7 +153,7 @@
 3:
     .balign 4                           @ pad with 0's to 4 byte boundary
     .global \label
-\label:                                 @ CFA for the word    
+\label:                                 @ CFA for the word
     .word \code                         @ code field - points to the assembly code for the word (must be defined
                                         @ in the .text section)
     .set link, 1b
@@ -164,16 +163,16 @@
 @
 @   Create a constant definition for a word in the dictionary.
 @
-@   This dictionary definition is stored in the .rodata section, which is read-only.
+@   This dictionary definition is stored in the .section .rodata section, which is read-only.
 @   A small word defintion is used to define a constant in the dictionary that pushes the value onto the
-@   data stack when executed. 
+@   data stack when executed.
 @
-@   Example: 10 CONSTANT TEN 
-@                                                           constant value
-@   +--------+---------+---+---+---+---+----------+--------+-|------+--------+
-@   | LOCATE | LINK    | 3 | T | E | N | _docol   | LIT    | 100    | EXIT   |
-@   +--------+---------+---+---+---+---+-|--------+--------+--------+--------+
-@                                      points to the DOCOL interpreter.
+@   Example: 10 CONSTANT TEN
+@                                                constant value
+@   +--------+---------+---+---+---+---+--------+-|------+
+@   | LOCATE | LINK    | 3 | T | E | N | DOCON  | 10     |
+@   +--------+---------+---+---+---+---+-|------+--------+
+@                                       points to the DOCON interpreter.
 
     .macro defconst name, label, value
     .section .rodata
@@ -187,7 +186,7 @@
 3:
     .balign 4                           @ pad with 0's to 4 byte boundary
     .global \label
-\label:                                 @ CFA for the word    
+\label:                                 @ CFA for the word
     .word _docol                        @ code field - points to the DOCOL interpreter
     .word LIT                           @ first execution token in definition
     .word \value                        @ value of the constant
@@ -202,19 +201,19 @@
 @
 @   This dictionary definition is stored in the .data section, which is writable.
 @   A small word defintion is used to define a value in the dictionary that pushes the value onto the
-@   data stack when executed. 
+@   data stack when executed.
 @
 @   Use TO and +TO to change the value.
 @
-@   Example: 42 VALUE VAL  
-@                                                            value
-@   +--------+---------+---+---+---+---+----------+--------+-|------+--------+
-@   | LOCATE | LINK    | 3 | V | A | L | _docol   | LIT    | 42     | EXIT   |
-@   +--------+---------+---+---+---+---+-|--------+--------+--------+--------+
-@                                      points to the DOCOL interpreter.
+@   Example: 42 VALUE VAL
+@                                                value
+@   +--------+---------+---+---+---+---+--------+-|------+
+@   | LOCATE | LINK    | 3 | V | A | L | DOVAL  | 42     |
+@   +--------+---------+---+---+---+---+-|------+--------+
+@                                       points to the DOCOL interpreter.
 
     .macro defvalue name, label, value
-    .section .data
+    .data
     .balign 4                           @ make sure we are on a 4 byte boundary
     .word 0                             @ locate
 1:
@@ -225,7 +224,7 @@
 3:
     .balign 4                           @ pad with 0's to 4 byte boundary
     .global \label
-\label:                                 @ CFA for the word    
+\label:                                 @ CFA for the word
     .word _docol                        @ code field - points to the DOCOL interpreter
     .word LIT                           @ first execution token in definition
     .word \value                        @ value of the constant
@@ -241,16 +240,16 @@
 @   This dictionary definition is stored in the .data section, which is writable.
 @   The data field stores the value of the variable.
 @
-@   Example: VARIABLE DATA 
+@   Example: VARIABLE DATA
 @
-@           zero specifies to push the pointer to its data on to stack      variable value
-@   +--------+---------+---+---+---+---+---+---+---+---+----------+-|------+-|------+
-@   | LOCATE | LINK    | 4 | D | A | T | A | 0 | 0 | 0 | _dodoes  | 0      | 0      |
-@   +--------+---------+---+---+---+---+---+---+---+---+-|--------+--------+--------+
-@                                                      points to the DODOES interpreter.
+@                                                                variable value
+@   +--------+---------+---+---+---+---+---+---+---+---+--------+-|------+
+@   | LOCATE | LINK    | 4 | D | A | T | A | 0 | 0 | 0 | DOVAR  | 0      |
+@   +--------+---------+---+---+---+---+---+---+---+---+-|------+--------+
+@                                                       points to the DOVAR interpreter.
 
     .macro defvar name, label, initial=0
-    .section .data
+    .data
     .balign 4                           @ make sure we are on a 4 byte boundary
     .word 0                             @ locate
 1:
@@ -261,8 +260,8 @@
 3:
     .balign 4                           @ pad with 0's to 4 byte boundary
     .global \label
-\label:                                 @ CFA for the word    
-    .word _dodoes  
+\label:                                 @ CFA for the word
+    .word _dodoes
     .word 0                             @ code field - points to the DOVAR interpreter
     .global var_\label
 var_\label:                             @ DFA for the variable
@@ -292,7 +291,7 @@ var_\label:                             @ DFA for the variable
     .equ ERR_UNDEFINED_WORD,            -13
     .equ ERR_COMPILE_ONLY_WORD,         -14
     .equ ERR_INVALID_FORGET,            -15
-    .equ ERR_RETURN_STACK_IMBALANCE,    -25 
+    .equ ERR_RETURN_STACK_IMBALANCE,    -25
     .equ ERR_USER_INTERRUPT,            -28
     .equ ERR_FLOAT_STACK_OVERFLOW,      -44
     .equ ERR_FLOAT_STACK_UNDERFLOW,     -45

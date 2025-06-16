@@ -8,9 +8,10 @@
 
     .include "forth.inc"
 
-    .section .text
+    .text
 
     .global _catch
+    .thumb_func
 _catch:
     popd r0
     pushr r5                            @ save instruction pointer after CATCH   
@@ -34,21 +35,23 @@ catch_return:
     .word _catch_finish
 
     .global _throw
+    .thumb_func
 _throw:
     popd r0
     bl __throw
     NEXT
 
     .global __throw
+    .thumb_func
 __throw:
     cmp r0, #0
     bne 1f  
     bx lr                               @ No exception, return to caller                    
     
-    push {r4-r7, lr}
+1:  push {r4-r7, lr}
 
     @ Find the top-mode exception frame
-1:  movw r1, :lower16:return_stack_top
+    movw r1, :lower16:return_stack_top
     movt r1, :upper16:return_stack_top
 2:  cmp r6, r1
     bge 3f                              @ if the return stack is empty, no exception frame

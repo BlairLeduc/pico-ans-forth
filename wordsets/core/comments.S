@@ -8,9 +8,10 @@
 
     .include "forth.inc"
 
-    .section .text
+    .text
 
     .global _dot_paren
+    .thumb_func
 _dot_paren:
     mov r0, #0x29                       @ ASCII '"'
     mov r1, #1                          @ skip leading spaces

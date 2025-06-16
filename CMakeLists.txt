@@ -25,7 +25,8 @@ endif()
 # ====================================================================================
 set(PICO_BOARD pico2_w CACHE STRING "Board type")
 set(PICO_DEOPTIMIZED_DEBUG ON)      # Disable optimizations.
-set(PICO_ANS_FORTH_VERSION "1.0.0-alpha.3")
+set(PICO_ANS_FORTH_VERSION "1.0.0-alpha.4")
+set(PICO_ANS_FORTH_TERMINAL "uart")
 
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)
@@ -54,7 +55,8 @@ set(FORTH_SOURCES
     wordsets/facility/extension.S
     wordsets/string/core.S
     wordsets/tools/core.S
-    dictionary.S
+    wordsets/dictionary.S
+    memory.S
     forth.c
     forth.S)
 
@@ -80,16 +82,22 @@ pico_set_program_name(pico-ans-forth "pico-ans-forth")
 pico_set_program_url(pico-ans-forth "https://github.com/BlairLeduc/pico-ans-forth")
 pico_set_program_version(pico-ans-forth "${PICO_ANS_FORTH_VERSION}")
 
-# Modify the below lines to enable/disable output over UART/USB
-#pico_enable_stdio_uart(pico-ans-forth 0)
-#pico_enable_stdio_usb(pico-ans-forth 0)
-
-configure_file(version.h.in version.h)
+if(PICO_ANS_FORTH_TERMINAL STREQUAL "uart")
+    target_compile_definitions(pico-ans-forth PRIVATE PICO_ANS_FORTH_TERMINAL_UART)
+elseif(PICO_ANS_FORTH_TERMINAL STREQUAL "picocalc")
+    target_compile_definitions(pico-ans-forth PRIVATE PICO_ANS_FORTH_TERMINAL_PICOCALC)
+endif()
 
 # Add the standard library to the build
 target_link_libraries(pico-ans-forth
         pico_stdlib
         hardware_uart
+)
+
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/version.h.in
+    ${CMAKE_CURRENT_BINARY_DIR}/version.h
+    @ONLY
 )
 
 # Add the standard include files to the build

@@ -8,9 +8,10 @@
 
     .include "forth.inc"
 
-    .section .text
+    .text
 
     .global _keyq
+    .thumb_func
 _keyq:
     bl __key_available
     pushd r0
@@ -19,6 +20,7 @@ _keyq:
 
     @ Temporary, ekey returns char, so do nothing and say conversion is successful
     .global _key_to_char
+    .thumb_func
 _key_to_char:
     mov r0, #-1
     pushd r0
@@ -26,6 +28,7 @@ _key_to_char:
 
 
     .global _at_xy
+    .thumb_func
 _at_xy:
     mov r0, #0x1B                       @ ASCII escape character
     bl __emit
@@ -43,6 +46,7 @@ _at_xy:
 
 
     .global _page
+    .thumb_func
 _page:
     ldr r0, =vt100_clear
     bl __type_cstr

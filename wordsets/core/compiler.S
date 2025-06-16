@@ -67,7 +67,7 @@
 @                                 |             |
 @                                 +-------------+
 
-    .section .text
+    .text
 
     @   6.1.0150    , ( x -- )                          “comma”
     @
@@ -76,12 +76,14 @@
     @   exists if the data-space pointer is not aligned prior to execution of ",".
 
     .global _comma
+    .thumb_func
 _comma:
     popd r0
     bl _comma
     NEXT
 
     .global __comma
+    .thumb_func
 __comma:
     movw r1, :lower16:var_DP            @ load the address of the DP variable
     movt r1, :upper16:var_DP
@@ -96,6 +98,7 @@ __comma:
     @   Enter compilation state.
 
     .global _rbrac
+    .thumb_func
 _rbrac:
     mov r0, #1
     movw r0, :lower16:var_STATE         @ load the address of STATE
@@ -112,6 +115,7 @@ _rbrac:
     @       Enter interpretation state. [ is an immediate word.
 
     .global _lbrac
+    .thumb_func
 _lbrac:
     eor r0, r0                          @ clear r0
     movw r0, :lower16:var_STATE         @ load the address of STATE
@@ -131,6 +135,7 @@ _lbrac:
     @       phrase "['] X " is the same value returned by "' X " outside of compilation state.
 
     .global _bracket_tick
+    .thumb_func
 _bracket_tick:
     @ Compilation
     bl __tick
@@ -146,12 +151,14 @@ _bracket_tick:
 
 
     .global _branch
+    .thumb_func
 _branch:
     ldr r0, [r5]                        @ Get the address of the next word and skip it.
     add r5, r0                          @ Add the offset to the instruction pointer.
     NEXT
 
     .global _zbranch
+    .thumb_func
 _zbranch:
     popd r0
     cmp r0, #0                          @ top of stack is zero?
@@ -171,6 +178,7 @@ _zbranch:
     @   ALLOT begins execution, it will remain character aligned when ALLOT finishes execution.
 
     .global _allot
+    .thumb_func
 _allot:
     popd r0                             @ get the number of bytes to allot
     movw r1, :lower16:var_DP
@@ -199,12 +207,14 @@ _allot:
     @       by using DOES>.
 
     .global _create
+    .thumb_func
 _create:
     bl _create
     pushd r0
     NEXT
 
     .global __create
+    .thumb_func
 __create:
     push {r4-r7, lr}
 
@@ -253,6 +263,7 @@ msg_not_unique:
     .balign 4
 
     .global _parameterField
+    .thumb_func
 _parameterField:
     add r1, r0, #4                    @ move to the data field
     pushd r1
@@ -264,6 +275,7 @@ _parameterField:
     @   u is the amount of space remaining in the region addressed by HERE , in address units.
 
     .global _unused
+    .thumb_func
 _unused:
     movw r0, :lower16:var_DP
     movt r0, :upper16:var_DP
@@ -286,6 +298,7 @@ _unused:
     @   until the execution of DOES> in some systems).
 
     .global _colon
+    .thumb_func
 _colon:
     bl __create                         @ Create a new word
     ldr r1, =_docol
@@ -307,6 +320,7 @@ _colon:
     @   data-space pointer is not aligned, reserve enough data space to align it.
 
     .global _semicolon
+    .thumb_func
 _semicolon:
     ldr r1, =var_DP
     ldr r2, [r1]                        @ Get the current value of DP
@@ -331,6 +345,7 @@ _semicolon:
     @   ambiguous condition exists if RECURSE appears in a definition after DOES>.
 
     .global _recurse
+    .thumb_func
 _recurse:
     ldr r1, =var_LATEST
     ldr r0, [r1]                        @ Get the address of LATEST
@@ -348,6 +363,7 @@ _recurse:
     @   the same value returned by :NONAME outside of compilation state.
 
     .global _colon_noname
+    .thumb_func
 _colon_noname:
     ldr r0, =var_DP
     ldr r1, [r0]                        @ Get the current value of DP

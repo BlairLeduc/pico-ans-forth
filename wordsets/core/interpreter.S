@@ -9,7 +9,7 @@
 
     .include "forth.inc"
 
-    .section .text
+    .text
 
 @
 @   DOCOL executes a list of execution tokens.
@@ -21,10 +21,13 @@
 @   Example: : DOUBLE DUP + ;
 @
 @   +--------+--------+---+---+---+---+---+---+---+---+--------+--------+--------+--------+
-@   | LOCATE | LINK   | 6 | D | O | U | B | L | E | 0 | _docol | DUP    | +      | EXIT   |
+@   | LOCATE | LINK   | 6 | D | O | U | B | L | E | 0 | DOCOL  | DUP    | +      | EXIT   |
 @   +--------+--------+---+---+---+---+---+---+---+---+-|------+--------+--------+--------+
 @                                                       |
 @                                                       r0
+@
+@   r5 points to the instruction after the instruction that called (DOCOL). There is where we
+@   will return to when we EXIT from the word being executed.
 @
 @   A copy of NEXT for easy reference, this is the main interpreter loop.
 @
@@ -38,20 +41,22 @@
 
 @   Process the execution tokens in the word pointed to by r0. 
     .global _docol
+    .thumb_func
 _docol:
     pushr r5                            @ push the return instruction pointer on to the return stack
-    add r5, r0, #4                      @ set r5 to point the the first execution token in this word
+    add r5, r0, #4                      @ set r5 to point to the first execution token in this word
     NEXT                                @ call the interpreter or hand-crafted code of the execution token in r5.
 
 @   Return to the interpreter that called DOCOL.
     .global _exit
+    .thumb_func
 _exit:
     popr r5                             @ pop return instruction pointer from the return stack
-    cmp r5, #0                          @ check if we have a return instruction pointer
+    cmp r5, #-1                         @ check if we have a return instruction pointer
     beq 1f                              @ if not, branch to error handling
     NEXT                                @ call the interpreter or hand-crafted code of the execution token in r5.
 1:  ldr r0, =ERR_RETURN_STACK_IMBALANCE @ set error code for exit on exception frame
-    bl __type_error                       @ emit the error message
+    bl __type_error                     @ emit the error message
     b _quit                             @ return to the terminal
 
 @
@@ -63,24 +68,26 @@ _exit:
 @
 @   Basic structure:
 @
-@   +--------+--------+---+---+---+---+---------+--------+--------+--------...------+--------+
-@   | LOCATE | LINK   | 3 | V | A | R | _dodoes | OFFSET | data   | behaviour words | EXIT   |
-@   +--------+--------+---+---+---+---+-|-------+-|------+--------+--------...------+--------+
-@                                       |         |                 ^
-@                                       r0        |                 |
-@                                                 +-----------------+
+@   : MSG   CREATE DOES> COUNT TYPE ;
+@                                                         update the code field (from create) to point to (DOES>)
+@   +--------+---------+---+---+---+---+--------+--------+-|------+---------+--------+--------+--------+
+@   | LOCATE | LINK    | 3 | M | S | G | DOCOL  | CREATE | DODOES | (DOES>) | COUNT  | TYPE   | EXIT   |
+@   +--------+---------+---+---+---+---+--------+--------+--------+-^-------+--------+--------+--------+
+@                                                                   |
+@   MSG (CR) 2 C, 0D C, 0A C,                               +-------+
+@                                                value      |
+@   +--------+---------+---+---+---+---+---+---+---+---+----|---+----+----+----+----+
+@   | LOCATE | LINK    | 4 | ( | C | R | ) | 0 | 0 | 0 | a-addr | 02 | 0D | 0A | 00 |
+@   +--------+---------+---+---+---+---+---+---+---+---+----|---+----+----+----+----+
+@                                                          was DOVAR
 @
-@   When the OFFSET is zero, representing no behaviour words are defined, DODOES performs the
-@   default behaviour of pushing the pointer to the data onto the stack.
-@
-@   +--------+--------+---+---+---+---+---------+--------+--------+
-@   | LOCATE | LINK   | 3 | V | A | R | _dodoes | 0      | data   |
-@   +--------+--------+---+---+---+---+-|-------+-|------+--------+
-@                                       |        no behaviour words
-@                                       r0
-@
+@   (DOES>) pushes r5 (parameter area) on the stack, and then does contnues as DOCOL would.
+@   After DODOES updates the code field, it will EXIT.
+@  
+
 
     .global _dodoes
+    .thumb_func
 _dodoes:
     ldr r1, [r0, #4]                    @ r1 = behavior pointer
     cmp r1, #0                          @ Is it zero?
@@ -96,11 +103,13 @@ _dodoes:
 @
 
     .global _noop
+    .thumb_func
 _noop:
     NEXT
 
 
     .global _lit
+    .thumb_func
 _lit:
     @ LIT pushes a literal number onto the stack.
     @ r5 points to the next command, but in this case it points to the next
@@ -110,6 +119,7 @@ _lit:
     NEXT
 
     .global _s_lit
+    .thumb_func
 _s_lit:
     ldr r0, [r5], #4                    @ r0 = length of the string
     pushd r5
@@ -121,6 +131,7 @@ _s_lit:
 
 
     .global _parse_word
+    .thumb_func
 _parse_word:
     mov r0, #0x20                       @ space delimiter
     mov r1, #1
@@ -130,6 +141,7 @@ _parse_word:
     NEXT
 
     .global _parse
+    .thumb_func
 _parse:
     popd r0                             @ delimiter
     eor r1, r1                          @ don't skip initial delimiters
@@ -139,6 +151,7 @@ _parse:
     NEXT
 
     .global __parse
+    .thumb_func
 __parse: @ r0 = delimiter, r1 = skip initial spaces
     push {r4-r7}
 
@@ -188,15 +201,18 @@ __parse: @ r0 = delimiter, r1 = skip initial spaces
     bx lr
 
     .global _evaluate
+    .thumb_func
 _evaluate:
     NEXT
 
     .global _interpret
+    .thumb_func
 _interpret:
     bl __interpret
     NEXT
 
     .global __interpret
+    .thumb_func
 __interpret:
     push {r4-r7, lr}                    @ save registers
     mov r0, #0x20                       @ delimiter
@@ -285,6 +301,7 @@ interpret_done_vector:
 
     @   QUIT is the main entry point for the interpreter.
     .global _quit
+    .thumb_func
 _quit:
     @ Reset the stacks and variables
     movw r8, :lower16:data_stack_top
@@ -338,6 +355,7 @@ compile_prompt:
     .balign 4
 
     .global _execute
+    .thumb_func
 _execute:
     popd r0                             @ get xt into r0
     ldr r1, [r0]
@@ -345,12 +363,14 @@ _execute:
     blx r1     
 
     .global _refill
+    .thumb_func
 _refill:
     bl __refill
     pushd r0                             @ get the result of the refill
     NEXT
 
     .global __refill
+    .thumb_func
 __refill:
     push {lr}
     movw r0, :lower16:var_BLK           @ load the BLK source
@@ -398,6 +418,7 @@ __refill:
 
 
     .global _restore_input
+    .thumb_func
 _restore_input:
     popd r2                             @ the number of items to restore
     subs r2, #1                         @ decrement and set flags
@@ -435,6 +456,7 @@ _restore_input:
 
 
     .global _save_input
+    .thumb_func
 _save_input:
     movw r0, :lower16:input_source
     movt r0, :upper16:input_source
@@ -455,6 +477,7 @@ _save_input:
     NEXT
 
     .global _source
+    .thumb_func
 _source:
     movw r0, :lower16:input_source
     movt r0, :upper16:input_source
@@ -464,6 +487,7 @@ _source:
     NEXT
 
     .global _tib
+    .thumb_func
 _tib:
     movw r0, :lower16:terminal_input_buffer
     movt r0, :upper16:terminal_input_buffer
@@ -478,12 +502,14 @@ _tib:
     @   When interpreting, ' xyz EXECUTE is equivalent to xyz.
     
     .global _tick
+    .thumb_func
 _tick:
     bl __tick
     pushd r0                            @ push found execution token
     NEXT
 
     .global __tick
+    .thumb_func
 __tick:
     push {r4-r5, lr}
     mov r0, #0x20                       @ space delimiter
@@ -498,12 +524,14 @@ __tick:
 
 
     .global _bracket_defined
+    .thumb_func
 _bracket_defined:
     bl __bracket_defined
     pushd r0                            @ push execution token
     NEXT
 
     .global __bracket_defined
+    .thumb_func
 __bracket_defined:
     push {lr}
     mov r0, #0x20                       @ space delimiter
@@ -517,12 +545,14 @@ __bracket_defined:
 
 
     .global _bracket_undefined
+    .thumb_func
 _bracket_undefined:
     bl __bracket_undefined
     pushd r0                            @ push execution token
     NEXT
 
     .global __bracket_undefined
+    .thumb_func
 __bracket_undefined:
     push {lr}
     mov r0, #0x20                       @ space delimiter
@@ -561,14 +591,16 @@ __word_not_found_error:
     @
     @   An ambiguous condition exists if [IF] is POSTPONEd, or if the end of the input buffer is
     @   reached and cannot be refilled before the terminating [ELSE] or [THEN] is parsed.
-    
+
     .global _bracket_if
+    .thumb_func
 _bracket_if:
     popd r0
     bl __bracket_if
     NEXT
 
     .global __bracket_if
+    .thumb_func
 __bracket_if:
 
     push {r4, lr}
@@ -631,11 +663,13 @@ __bracket_if:
     @   exhausted, it is refilled as with REFILL. [ELSE] is an immediate word.
 
     .global _bracket_else
+    .thumb_func
 _bracket_else:
     bl __bracket_else
     NEXT
 
     .global __bracket_else
+    .thumb_func
 __bracket_else:
     push {r4, lr}
     eor r4, r4                          @ r4 = nested level counter
@@ -690,6 +724,7 @@ __bracket_else:
     @       r1 - length of the word to compare
     @       r2 - -1 for match, 0 for no match
     .global __compare_word
+    .thumb_func
 __compare_word:
     push {r4-r7, lr}
     mov r6, r0                          @ r4 = address of the word to compare
@@ -757,6 +792,7 @@ word_then:
     @   immediate, also return one (1), otherwise also return minus-one (-1). For a given string, the
     @   values returned by FIND while compiling may differ from those returned while not compiling.
     .global _find
+    .thumb_func
 _find:
     popd r0                            @ address of the search string
     bl __find
@@ -833,6 +869,7 @@ __find:
 
     
     .global __find_entry
+    .thumb_func
 __find_entry:
     push {r4-r7}
 
@@ -884,6 +921,7 @@ __find_entry:
 
 
     .global __to_cfa
+    .thumb_func
 __to_cfa:
     add r0, #4                          @ r0 = address of the name field   
     ldrb r1, [r0], #1                   @ r1 = flags+length field of current entry

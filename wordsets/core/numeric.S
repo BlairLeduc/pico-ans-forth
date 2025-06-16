@@ -10,9 +10,10 @@
 
     .include "forth.inc"
 
-    .section .text
+    .text
 
     .global _char
+    .thumb_func
 _char:
     mov r0, #32                         @ ASCII space
     bl __word                            @ Returns r0 = length, r1 = pointer to word
@@ -26,6 +27,7 @@ _char:
     NEXT
 
     .global __number
+    .thumb_func
 __number: @ r0 = pointer to string
     push {r4-r5}
     ldrb r1, [r0]                       @ length of the string
@@ -88,6 +90,7 @@ __number: @ r0 = pointer to string
     @   Display n in free field format.
 
     .global _dot
+    .thumb_func
 _dot:
     popd r0                             @ get number from stack
     bl __dot                            @ convert to string and print
@@ -96,6 +99,7 @@ _dot:
     NEXT
 
     .global __dot
+    .thumb_func
 __dot:
     push {lr}
     mov r1, r0
@@ -104,6 +108,7 @@ __dot:
     pop {pc}
 
     .global _dot_r
+    .thumb_func
 _dot_r:
     popd r0
     popd r1
@@ -111,6 +116,7 @@ _dot_r:
     NEXT
 
     .global __dot_r
+    .thumb_func
 __dot_r: @ r0 = field width, r1 = number to print
     push {r4-r8, lr}
     mov r4, r1                          @ save number to convert
@@ -177,6 +183,7 @@ __dot_r: @ r0 = field width, r1 = number to print
 
 
     .global _u_dot
+    .thumb_func
 _u_dot:
     popd r0                             @ get number from stack
     bl __u_dot                            @ convert to string and print
@@ -185,6 +192,7 @@ _u_dot:
     NEXT
 
     .global __u_dot
+    .thumb_func
 __u_dot:
     push {lr}
     mov r1, r0
@@ -193,6 +201,7 @@ __u_dot:
     pop {pc}
 
     .global _u_dot_r
+    .thumb_func
 _u_dot_r:
     popd r0
     popd r1
@@ -200,6 +209,7 @@ _u_dot_r:
     NEXT
 
     .global __u_dot_r
+    .thumb_func
 __u_dot_r: @ r0 = field width, r1 = number to print
     push {r4-r8, lr}
     mov r4, r1                          @ save number to convert
@@ -249,6 +259,7 @@ __u_dot_r: @ r0 = field width, r1 = number to print
     pop {r4-r8, pc}
 
     .global __u_dot_0r
+    .thumb_func
 __u_dot_0r: @ r0 = field width, r1 = number to print
     push {r4-r8, lr}
     mov r4, r1                          @ save number to convert

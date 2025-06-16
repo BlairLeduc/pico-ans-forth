@@ -8,9 +8,10 @@
 
     .include "forth.inc"
 
-    .section .text
+    .text
 
     .global _emitq
+    .thumb_func
 _emitq:
     bl __emit_available
     pushd r0

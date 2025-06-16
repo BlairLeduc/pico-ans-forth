@@ -8,9 +8,10 @@
 
     .include "forth.inc"
 
-    .section .text
+    .text
 
     .global _here
+    .thumb_func
 _here:
     ldr r0, =var_DP
     ldr r0, [r0]
@@ -19,6 +20,7 @@ _here:
 
 
     .global _pad
+    .thumb_func
 _pad:
     ldr r0, =pad_storage
     pushd r0
@@ -26,8 +28,11 @@ _pad:
 
 
     .global _blank
+    .thumb_func
     .global _erase
+    .thumb_func
     .global _fill
+    .thumb_func
 _blank:
     popd r1
     popd r2
@@ -51,6 +56,7 @@ _fill:
 
 
     .global _move
+    .thumb_func
 _move:
     popd r1                             @ count (u)
     popd r2                             @ destination addr (addr2)
@@ -61,6 +67,7 @@ _move:
     @   Copy a block of bytes from source to destination.
     @   r0 = source address, r1 = count (u), r2 = destination addr
     .global __move
+    .thumb_func
 __move:
 1:  cmp r1, #0
     beq 2f
@@ -72,6 +79,7 @@ __move:
 
 
     .global _bl
+    .thumb_func
 _bl:
     mov r0, #0x20                       @ ASCII space (0x20)
     pushd r0
@@ -79,6 +87,7 @@ _bl:
 
 
     .global _count
+    .thumb_func
 _count:
     popd r0
     ldrb r1, [r0], #1
@@ -88,6 +97,7 @@ _count:
 
 
     .global _word
+    .thumb_func
 _word:
     popd r0
     bl __word
@@ -95,6 +105,7 @@ _word:
     NEXT
 
     .global __word
+    .thumb_func
 __word: @ r0 = delimiter (usually space)
     push {r4-r6}
 
@@ -157,6 +168,7 @@ __word: @ r0 = delimiter (usually space)
     @       alter the returned string.
 
     .global _s_quote
+    .thumb_func
 _s_quote:
     mov r0, #0x22                       @ ASCII '"'
     eor r1, r1                          @ skip leading spaces
@@ -200,6 +212,7 @@ _s_quote:
     @       Display ccc.
 
     .global _dot_quote
+    .thumb_func
 _dot_quote:
     mov r0, #0x22                       @ ASCII '"'
     eor r1, r1                          @ skip leading spaces

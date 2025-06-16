@@ -7,25 +7,24 @@
 #ifndef FORTH_H
 #define FORTH_H
 
-void on_uart_rx();
-void on_hardware_fault();
-
 void check_for_user_interrupt();
 
+
+// These functions must be implemented to support the terminal interface
+void terminal_init();
+
+// Terminal Input
 int __key_available();
 int __key();
 
+// Terminal Output
 bool __emit_available();
 void __emit(char ch);
-void __type(const char *str, int len);
-void __type_cstr(const char *str);
-int __accept(char *buffer, int len);
-void __type_error(int error_code);
 
-void hardware_init();
 
-// Assembly functions
-void forth_start();
-void _quit();
+// External references (implemented in assembly)
+extern void __type_error(int error_code);
+extern void forth_start();
+extern void _quit();
 
 #endif // FORTH_H
