@@ -185,3 +185,134 @@ _spaces:
 2:  pop {r4}
     NEXT
 
+
+    .global _refill
+    .thumb_func
+_refill:
+    bl __refill
+    pushd r0                             @ get the result of the refill
+    NEXT
+
+    .global __refill
+    .thumb_func
+__refill:
+    push {lr}
+    movw r0, :lower16:var_BLK           @ load the BLK source
+    movt r0, :upper16:var_BLK
+    ldr r0, [r0]                        @ get the current block number
+    cmp r0, #0                          @ is it zero?
+    beq 1f                              @ if so, check SOURCE_ID to determine input source
+
+    @ Block input stream (BLK > 0)
+    eor r0, r0                          @ not implemented: clear r0
+    pop {pc}                            @ always return false (no input available) until we implement block input
+
+1:  movw r0, :lower16:var_SOURCE_ID     @ load the source ID
+    movt r0, :upper16:var_SOURCE_ID
+    ldr r0, [r0]                        @ get the current source ID
+    cmp r0, #0                          @ the source is?
+    beq 2f                              @ = 0, refill from terminal
+    bgt 3f                              @ > 0, refill from a text file
+
+    @ Character String input stream or some unknown source (SOURCE_ID < 0)
+    eor r0, r0                          @ refill does not apply to character strings (or unknown sources)
+    pop {pc}                            @ always return false (no input available)
+
+    @ Terminal input stream (SOURCE_ID = 0)
+2:  movw r0, :lower16:terminal_input_buffer
+    movt r0, :upper16:terminal_input_buffer
+    movw r1, :lower16:input_source
+    movt r1, :upper16:input_source
+    str r0, [r1]
+    mov r1, #TERMINAL_INPUT_BUFFER_SIZE
+    bl __accept
+    movw r1, :lower16:input_source + 4
+    movt r1, :upper16:input_source + 4
+    str r0, [r1]
+    movw r1, :lower16:var_TOIN
+    movt r1, :upper16:var_TOIN
+    eor r0,r0
+    str r0, [r1]                        @ reset >IN to 0
+    mov r0, #-1
+    pop {pc}
+
+    @ File input stream (SOURCE_ID > 0)
+3:  eor r0, r0                          @ not implemented: clear r0
+    pop {pc}                            @ always return false (no input available) until we implement file input
+
+
+    .global _restore_input
+    .thumb_func
+_restore_input:
+    popd r2                             @ the number of items to restore
+    subs r2, #1                         @ decrement and set flags
+    blt 3f                              @ if negative, branch to error handling
+    popd r0                             
+    ldr r1, =var_BLK
+    str r0, [r1]                        @ restore the BLK variable
+    subs r2, #1                         @ decrement and set flags
+    blt 3f                              @ if negative, branch to error handling
+    popd r0                             @ the source ID
+    ldr r1, =var_SOURCE_ID
+    str r0, [r1]                        @ restore the SOURCE_ID variable
+    subs r2, #1                         @ decrement and set flags
+    blt 3f                              @ if negative, branch to error handling
+    popd r1                             @ the source size
+    subs r2, #1                         @ decrement and set flags
+    blt 3f                              @ if negative, branch to error handling
+    popd r0                             @ the source pointer
+    movw r3, :lower16:input_source
+    movt r3, :upper16:input_source
+    stmia r3, {r0, r1}                  @ restore the source pointer and size
+    subs r2, #1                         @ decrement and set flags
+    blt 3f                              @ if negative, branch to error handling
+    
+1:  cmp r2, #0                          @ check if we have more items to remove
+    ble 2f                              @ if not, we're done
+    popd r0                             @ remove extra item from stack
+    subs r2, #1                         @ decrement counter
+    b 1b                                @ loop until all extra items removed
+
+2:  eor r2, r2                          @ clear r2 (success)
+3:  pushd r2                            @ push success flag
+    NEXT
+
+
+    .global _save_input
+    .thumb_func
+_save_input:
+    movw r0, :lower16:input_source
+    movt r0, :upper16:input_source
+    ldmia r0, {r0, r1}                  @ r4 = source buffer address, r5 = source size 
+    pushd r0
+    pushd r1
+    ldr r0, =var_TOIN
+    ldr r0, [r0]
+    pushd r0
+    ldr r0, =var_SOURCE_ID
+    ldr r0, [r0]
+    pushd r0
+    ldr r0, =var_BLK
+    ldr r0, [r0]
+    pushd r0
+    mov r0, #5
+    pushd r0                            @ push the number of items to save
+    NEXT
+
+    .global _source
+    .thumb_func
+_source:
+    movw r0, :lower16:input_source
+    movt r0, :upper16:input_source
+    ldmia r0, {r0, r1}                  @ r4 = source buffer address, r5 = source size 
+    pushd r0
+    pushd r1
+    NEXT
+
+    .global _tib
+    .thumb_func
+_tib:
+    movw r0, :lower16:terminal_input_buffer
+    movt r0, :upper16:terminal_input_buffer
+    pushd R0
+    NEXT

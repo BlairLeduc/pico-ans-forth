@@ -19,12 +19,12 @@
     .set S_QUOTED_STRING_BUFFER_SIZE, 80 @ 80 bytes for the S" quoted string buffer
 
     @ Output formatting (80 characters per line, 16 bytes per row in dump)
-    .equ CPL, 80                        @ characters per line
-    .equ BPR, 16                        @ bytes per row in dump
+@    .equ CPL, 80                        @ characters per line
+@    .equ BPR, 16                        @ bytes per row in dump
 
 @    @ Output formatting (40 characters per line, 4 bytes per row in dump)
-@    .equ CPL, 40                        @ characters per line
-@    .equ BPR, 4                         @ bytes per row in dump
+    .equ CPL, 40                        @ characters per line
+    .equ BPR, 4                         @ bytes per row in dump
 
 @
 @   The NEXT macro is used to execute the next instruction stored in the word's data fields.
@@ -168,11 +168,11 @@
 @   data stack when executed.
 @
 @   Example: 10 CONSTANT TEN
-@                                                constant value
-@   +--------+---------+---+---+---+---+--------+-|------+
-@   | LOCATE | LINK    | 3 | T | E | N | DOCON  | 10     |
-@   +--------+---------+---+---+---+---+-|------+--------+
-@                                       points to the DOCON interpreter.
+@                                                    constant value
+@   +--------+---------+---+---+---+---+------------+-|------+
+@   | LOCATE | LINK    | 3 | T | E | N | (CONSTANT) | 10     |
+@   +--------+---------+---+---+---+---+-|----------+--------+
+@                                       points to the (CONSTANT) interpreter.
 
     .macro defconst name, label, value
     .section .rodata
@@ -187,10 +187,8 @@
     .balign 4                           @ pad with 0's to 4 byte boundary
     .global \label
 \label:                                 @ CFA for the word
-    .word _docol                        @ code field - points to the DOCOL interpreter
-    .word LIT                           @ first execution token in definition
+    .word _paren_constant               @ code field - points to the DOCOL interpreter
     .word \value                        @ value of the constant
-    .word EXIT
 
     .set link, 1b
     .endm
@@ -206,11 +204,11 @@
 @   Use TO and +TO to change the value.
 @
 @   Example: 42 VALUE VAL
-@                                                value
-@   +--------+---------+---+---+---+---+--------+-|------+
-@   | LOCATE | LINK    | 3 | V | A | L | DOVAL  | 42     |
-@   +--------+---------+---+---+---+---+-|------+--------+
-@                                       points to the DOCOL interpreter.
+@                                                    value
+@   +--------+---------+---+---+---+---+------------+-|------+
+@   | LOCATE | LINK    | 3 | V | A | L | (CONSTANT) | 42     |
+@   +--------+---------+---+---+---+---+-|----------+--------+
+@                                       points to the (CONSTANT) interpreter.
 
     .macro defvalue name, label, value
     .data
@@ -225,10 +223,8 @@
     .balign 4                           @ pad with 0's to 4 byte boundary
     .global \label
 \label:                                 @ CFA for the word
-    .word _docol                        @ code field - points to the DOCOL interpreter
-    .word LIT                           @ first execution token in definition
+    .word _paren_constant               @ code field - points to the DOCOL interpreter
     .word \value                        @ value of the constant
-    .word EXIT
 
     .set link, 1b
     .endm
@@ -242,11 +238,11 @@
 @
 @   Example: VARIABLE DATA
 @
-@                                                                variable value
-@   +--------+---------+---+---+---+---+---+---+---+---+--------+-|------+
-@   | LOCATE | LINK    | 4 | D | A | T | A | 0 | 0 | 0 | DOVAR  | 0      |
-@   +--------+---------+---+---+---+---+---+---+---+---+-|------+--------+
-@                                                       points to the DOVAR interpreter.
+@                                                                  variable value
+@   +--------+---------+---+---+---+---+---+---+---+---+----------+-|------+
+@   | LOCATE | LINK    | 4 | D | A | T | A | 0 | 0 | 0 | (CREATE) | 0      |
+@   +--------+---------+---+---+---+---+---+---+---+---+-|--------+--------+
+@                                                       points to the (CREATE) interpreter.
 
     .macro defvar name, label, initial=0
     .data
@@ -261,8 +257,7 @@
     .balign 4                           @ pad with 0's to 4 byte boundary
     .global \label
 \label:                                 @ CFA for the word
-    .word _dodoes
-    .word 0                             @ code field - points to the DOVAR interpreter
+    .word _paren_create
     .global var_\label
 var_\label:                             @ DFA for the variable
     .word \initial                      @ initial value of the variable
@@ -275,24 +270,62 @@ var_\label:                             @ DFA for the variable
 @   Error Codes
 @
 
-    .equ ERR_OK,                          0
-    .equ ERR_ABORT,                      -1
-    .equ ERR_ABORT_QUOTE,                -2
-    .equ ERR_STACK_OVERFLOW,             -3
-    .equ ERR_STACK_UNDERFLOW,            -4
-    .equ ERR_RETURN_STACK_OVERFLOW,      -5
-    .equ ERR_RETURN_STACK_UNDERFLOW,     -6
-    .equ ERR_TOO_DEEP_NESTING,           -7
-    .equ ERR_DICTIONARY_FULL,            -8
-    .equ ERR_INVALID_MEMORY_ADDRESS,     -9
-    .equ ERR_DIVIDE_BY_ZERO,            -10
+    .EQU ERR_OK,                          0
+    .equ ERR_ABORT,                      -1 
+    .equ ERR_ABORT_QUOTE,                -2 
+    .equ ERR_STACK_OVERFLOW,             -3 
+    .equ ERR_STACK_UNDERFLOW,            -4 
+    .equ ERR_RETURN_STACK_OVERFLOW,      -5 
+    .equ ERR_RETURN_STACK_UNDERFLOW,     -6 
+    .equ ERR_DO_LOOPS_NESTED_TOO_DEEPLY, -7 
+    .equ ERR_DICTIONARY_OVERFLOW,        -8 
+    .equ ERR_INVALID_MEMORY_ADDRESS,     -9 
+    .equ ERR_DIVISION_BY_ZERO,          -10
     .equ ERR_RESULT_OUT_OF_RANGE,       -11
     .equ ERR_ARGUMENT_TYPE_MISMATCH,    -12
     .equ ERR_UNDEFINED_WORD,            -13
     .equ ERR_COMPILE_ONLY_WORD,         -14
     .equ ERR_INVALID_FORGET,            -15
+    .equ ERR_ATTEMPT_TO_EMPTY_NAME,     -16
+    .equ ERR_PIC_NUM_OUTPUT_OVERFLOW,   -17
+    .equ ERR_PARSED_STRING_OVERFLOW,    -18
+    .equ ERR_DEFINITION_NAME_TOO_LONG,  -19
+    .equ ERR_WRITE_TO_ROM,              -20
+    .equ ERR_UNSUPPORTED_OPERATION,     -21
+    .equ ERR_CONTROL_STRUCT_MISMATCH,   -22
+    .equ ERR_ADDR_ALIGNMENT_EXCEPTION,  -23
+    .equ ERR_INVALID_NUMERIC_ARGUMENT,  -24
     .equ ERR_RETURN_STACK_IMBALANCE,    -25
+    .equ ERR_LOOP_PARAMS_UNAVAILABLE,   -26
+    .equ ERR_INVALID_RECURSION,         -27
     .equ ERR_USER_INTERRUPT,            -28
-    .equ ERR_FLOAT_STACK_OVERFLOW,      -44
-    .equ ERR_FLOAT_STACK_UNDERFLOW,     -45
-    .equ ERR_ON_STREAM,                 -57
+    .equ ERR_COMPILER_NESTING,          -29
+    .equ ERR_OBSOLESCENT_FEATURE,       -30
+    .equ ERR_TO_BODY_USED_INCORRECTLY,  -31
+    .equ ERR_INVALID_NAME_ARGUMENT,     -32
+    .equ ERR_BLOCK_READ_EXCEPTION,      -33
+    .equ ERR_BLOCK_WRITE_EXCEPTION,     -34
+    .equ ERR_INVALID_BLOCK_NUMBER,      -35
+    .equ ERR_INVALID_FILE_POSITION,     -36
+    .equ ERR_FILE_IO_EXCEPTION,         -37
+    .equ ERR_NONEXISTENT_FILE,          -38
+    .equ ERR_UNEXPECTED_EOF,            -39
+    .equ ERR_FP_INVALID_BASE,           -40
+    .equ ERR_FP_LOSS_OF_PRECISION,      -41
+    .equ ERR_FP_DIVIDE_BY_ZERO,         -42
+    .equ ERR_FP_RESULT_OUT_OF_RANGE,    -43
+    .equ ERR_FP_STACK_OVERFLOW,         -44
+    .equ ERR_FP_STACK_UNDERFLOW,        -45
+    .equ ERR_FP_INVALID_ARGUMENT,       -46
+    .equ ERR_COMP_WORDLIST_DELETED,     -47
+    .equ ERR_INVALID_POSTPONE,          -48
+    .equ ERR_SEARCHORDER_OVERFLOW,      -49
+    .equ ERR_SEARCHORDER_UNDERFLOW,     -50
+    .equ ERR_COMP_WORDLIST_CHANGED,     -51
+    .equ ERR_CF_STACK_OVERFLOW,         -52
+    .equ ERR_EXCEPTION_STACK_OVERFLOW,  -53
+    .equ ERR_FP_UNDERFLOW,              -54
+    .equ ERR_FP_UNIDENTIFIED_FAULT,     -55
+    .equ ERR_QUIT,                      -56
+    .equ ERR_EXCEPTION_IN_SEND_RECEIVE, -57
+    .equ ERR_IF_ELSE_THEN_EXCEPTION,    -58

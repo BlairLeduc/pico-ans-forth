@@ -1035,6 +1035,16 @@
     @   16.6.2.1590 FORTH ( -- ) [search ext]
     defcode "FORTH",,FORTH,_noop        @ Ignore this, for now
 
+
+@
+@   6.2.4.2 Constructing Custom Defining Words
+@
+
+    @ 6.1.1250      DOES> ( xt —- ) [core]
+    defword "DOES>",CB_PRECEDENCE,DOES
+
+    @               (DOES>) [core]
+    defword "(DOES>)",CB_PRECEDENCE,PAREN_DOES
 @
 @   Internal
 @

@@ -8,12 +8,9 @@
 // this file contains the C code that interfaces with the hardware using the
 // Raspberry Pi Pico-series C/C++ SDK.
 
-#include <stdio.h>
-#include <stdlib.h>
 #include "pico/stdlib.h"
 #include "hardware/uart.h"
-
-#include "forth.h"
+#include "hardware.h"
 
 static volatile bool user_interrupt = false; 
 
@@ -157,12 +154,4 @@ void __emit(char ch)
 #endif // PICO_ANS_FORTH_TERMINAL_PICOCALC
 
 
-//
-// The entry point for the Forth interpreter
-//
 
-int main()
-{
-    terminal_init();
-    forth_start();
-}

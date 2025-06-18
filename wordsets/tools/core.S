@@ -22,6 +22,8 @@ _dot_s:
     blt 2f
     ldr r0, [r4], #-4
     bl __dot
+    mov r0, #0x20                       @ space
+    bl __emit
     b 1b
 2:  ldr r0, =top_message
     bl __type_cstr

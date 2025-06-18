@@ -90,65 +90,86 @@ forth_start:
     @ Bootstrap the interpreter
     movw r5, :lower16:bootstrap
     movt r5, :upper16:bootstrap
-
     NEXT                                @ run the interpreter!
 
+
+    @   6.1.2050    QUIT ( -- ) ( R: i*x -- )
+    @
+    @   Empty the return stack, store zero in SOURCE-ID if it is present, make the user input device
+    @   the input source, and enter interpretation state. Do not display a message. Repeat the
+    @   following:
+    @       - Accept a line from the input source into the input buffer, set >IN to zero, and interpret.
+    @       - Display the implementation-defined system prompt if in interpretation state, all
+    @         processing has been completed, and no ambiguous condition exists.
+
+    .global _quit
+    .thumb_func
+_quit:
+    @ Reset the stacks and variables
+    movw r8, :lower16:data_stack_top
+    movt r8, :upper16:data_stack_top    @ initialise the data stack pointer
+
+    movw r7, :lower16:float_stack_top
+    movt r7, :upper16:float_stack_top   @ initialise the float stack
+    
+    eor r0, r0
+    ldr r1, =var_SOURCE_ID
+    str r0, [r1]                        @ clear the source ID (0 = teminal input stream)
+    ldr r1, =var_STATE
+    str r0, [r1]                        @ clear the state variable (0 = interpreting, 1 = compiling)
+
+0:  movw r6, :lower16:return_stack_top
+    movt r6, :upper16:return_stack_top  @ initialise the return stack
+
+1:  bl __refill                         @ refill the input stream
+    cmp r0, #0                          @ check for input error
+    beq 0b                              @ error, reset return stack and refill input stream
+
+2:  bl __interpret                      @ process the input stream
+    mov r4, r0                          @ r4 = the result of the interpretation (0 = no input, 1 = ok, -1 = error)
+    bl __check_stacks                   @ check system status
+    cmp r0, #ERR_OK                     @ check if there was an error
+    bne 4f                              @ if there was an error, branch to error handling
+    bl __key_available                  @ check if there is a user abort (if so, __key_available never returns)   
+    cmp r4, #0                          @ check if buffer empty
+    bne 2b
+
+    ldr r1, =var_STATE
+    ldr r0, [r1]                        @ load the state (0 = interpreting, 1 = compiling)
+    cmp r0, #0                          @ check if we are interpreting or compiling
+    beq 3f                              @ if interpreting, branch to ok prompt
+
+    ldr r0, =compile_prompt
+    bl __type_cstr                      @ print the compile prompt if compiling
+    b 1b
+
+3:  ldr r0, =ok_prompt
+    bl __type_cstr                      @ print the ok prompt if interpreting
+    b 1b
+
+4:  bl __type_error                     @ emit the error message
+    b _quit
+
+ok_prompt:
+    .asciz " ok\015\012"
+compile_prompt:
+    .asciz "\015\012  "
+    .balign 4
+
+
 @
-@   System Support
+@ No-op
 @
 
-    .global __check_stacks
+    .global _noop
     .thumb_func
-__check_stacks:
-    @ Check the integrity of the stacks and data space.
-    movw r0, :lower16:return_stack_top  @ check for return stack underflow
-    movt r0, :upper16:return_stack_top
-    subs r0, r6
-    bpl 1f
-    mov r0, #ERR_RETURN_STACK_UNDERFLOW
-    bx lr
-1:  movw r0, :lower16:return_stack      @ check for return stack overflow
-    movt r0, :upper16:return_stack
-    subs r0, r6
-    bmi 2f
-    mov r0, #ERR_RETURN_STACK_OVERFLOW
-    bx lr
-2:  movw r0, :lower16:data_stack_top    @ check for data stack underflow
-    movt r0, :upper16:data_stack_top
-    subs r0, r8
-    bpl 3f
-    mov r0, #ERR_STACK_UNDERFLOW
-    bx lr
-3:  movw r0, :lower16:data_stack        @ check for data stack overflow
-    movt r0, :upper16:data_stack
-    subs r0, r8
-    bmi 4f
-    mov r0, #ERR_STACK_OVERFLOW
-    bx lr
-4:  movw r0, :lower16:float_stack_top   @ check for float stack underflow
-    movt r0, :upper16:float_stack_top
-    subs r0, r7
-    bpl 5f
-    mov r0, #ERR_FLOAT_STACK_UNDERFLOW
-    bx lr
-5:  movw r0, :lower16:float_stack        @ check for float stack overflow
-    movt r0, :upper16:float_stack
-    subs r0, r7
-    bmi 6f
-    mov r0, #ERR_FLOAT_STACK_OVERFLOW
-    bx lr
-6:  movw r0, :lower16:data_space_top  @ check for data space overflow
-    movt r0, :upper16:data_space_top
-    movw r1, :lower16:var_LATEST
-    movt r1, :upper16:var_LATEST
-    ldr r1, [r1]                        @ get the address of LATEST
-    subs r0, r1
-    bpl 7f
-    mov r0, #ERR_DICTIONARY_FULL
-    bx lr
-7:  mov r0, #ERR_OK                     @ all checks passed, return OK
-    bx lr
- 
+_noop:
+    NEXT
+
+
+@
+@   Type the welcome message
+@
 
     .global __type_welcome
     .thumb_func
@@ -166,6 +187,10 @@ __type_welcome:
     .asciz "\n\r"
     .balign 4
 
+
+@
+@   Type an error message
+@
 
     .global __type_error
     .thumb_func

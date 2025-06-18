@@ -79,7 +79,7 @@
     .thumb_func
 _comma:
     popd r0
-    bl _comma
+    bl __comma
     NEXT
 
     .global __comma
@@ -209,7 +209,7 @@ _allot:
     .global _create
     .thumb_func
 _create:
-    bl _create
+    bl __create
     pushd r0
     NEXT
 
@@ -233,7 +233,7 @@ __create:
     add r5, r1
     add r5, #4
     and r5, #~3                         @ align the DP to a 4-byte boundary
-    ldr r2, =_parameterField
+    ldr r2, =_paren_create
     str r2, [r5], #4
     str r5, [r4]
     mov r0, r7
@@ -262,11 +262,17 @@ msg_not_unique:
     .ascii " isn't unique. "
     .balign 4
 
-    .global _parameterField
+    .global _does
     .thumb_func
-_parameterField:
-    add r1, r0, #4                    @ move to the data field
-    pushd r1
+_does:
+    ldr r2, =var_DP
+    ldr r2, [r2]                        @ get the current DP value
+    ldr r3, =_dodoes
+    str r3, [r2], #4                    @ store SLITERAL
+    ldr r3, =PAREN_DOES
+    str r3, [r2], #4                    @ store the (DOES>) address
+    ldr r3, =var_DP
+    str r2, [r3]                        @ update DP
     NEXT
 
 

@@ -37,14 +37,15 @@ project(pico-ans-forth C CXX ASM)
 pico_sdk_init()
 
 set(FORTH_SOURCES
+    compiler/compiler.S
+    interpreter/interpreters.S
+    interpreter/parse.S
     wordsets/block/core.S
     wordsets/core/arithmetic.S
     wordsets/core/character.S
     wordsets/core/comments.S
-    wordsets/core/compiler.S
     wordsets/core/control.S
     wordsets/core/input-output.S
-    wordsets/core/interpreter.S
     wordsets/core/logical.S
     wordsets/core/numeric.S
     wordsets/core/stack.S
@@ -56,9 +57,10 @@ set(FORTH_SOURCES
     wordsets/string/core.S
     wordsets/tools/core.S
     wordsets/dictionary.S
+    forth.S
     memory.S
-    forth.c
-    forth.S)
+    hardware.c
+    main.c)
 
 # Add forth.inc as a dependency
 set_source_files_properties(

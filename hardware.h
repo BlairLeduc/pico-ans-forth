@@ -4,8 +4,8 @@
 //  See LICENSE for details.
 //
 
-#ifndef FORTH_H
-#define FORTH_H
+#ifndef HARDWARE_H
+#define HARDWARE_H
 
 void check_for_user_interrupt();
 
@@ -27,4 +27,4 @@ extern void __type_error(int error_code);
 extern void forth_start();
 extern void _quit();
 
-#endif // FORTH_H
+#endif // HARDWARE_H

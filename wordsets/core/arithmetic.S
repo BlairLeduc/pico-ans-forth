@@ -78,7 +78,7 @@ _slash_mod:
     NEXT
 
 1:                                      @ Divide by zero error
-    mov r0, #ERR_DIVIDE_BY_ZERO
+    mov r0, #ERR_DIVISION_BY_ZERO
     bl __throw
     NEXT
 
@@ -213,7 +213,7 @@ _udivmod:
     pushd r2                            @ push the quotient
     NEXT
 1:                                      @ Divide by zero error  
-    mov r0, #ERR_DIVIDE_BY_ZERO
+    mov r0, #ERR_DIVISION_BY_ZERO
     bl __throw
     NEXT
 
