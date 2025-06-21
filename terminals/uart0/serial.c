@@ -1,5 +1,5 @@
 //
-//  ANS Forth for the Pico 2
+//  ANS Forth for the Clockwork PicoCalc
 //  Copyright Blair Leduc.
 //  See LICENSE for details.
 //
@@ -7,7 +7,7 @@
 //
 // Pico 2 (W) serial driver
 //
-// This driver implements a simple serial interface for the Pico 2 using the
+// This driver implements a simple serial interface for the Clockwork PicoCalc using the
 // UART peripheral. It handles character reception and transmission,
 // user interrupts (Ctrl+C), and provides functions to check for available keys
 // and emit characters. The driver uses a circular buffer to store received characters

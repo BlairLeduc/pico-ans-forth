@@ -1,5 +1,5 @@
 //
-//  ANS Forth for the Pico 2
+//  ANS Forth for the Clockwork PicoCalc
 //  Copyright Blair Leduc.
 //  See LICENSE for details.
 //
