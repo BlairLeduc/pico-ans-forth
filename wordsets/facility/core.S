@@ -54,5 +54,12 @@ _page:
 
 vt100_clear:
     .ascii "\033[2J\033[H"
+    .balign 4
 
 
+    .global _battery
+    .thumb_func
+_battery:
+    bl read_battery
+    pushd r0
+    NEXT

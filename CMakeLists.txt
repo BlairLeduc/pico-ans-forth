@@ -25,8 +25,9 @@ endif()
 # ====================================================================================
 set(PICO_BOARD pico2_w CACHE STRING "Board type")
 set(PICO_DEOPTIMIZED_DEBUG ON)      # Disable optimizations.
-set(PICO_ANS_FORTH_VERSION "1.0.0-alpha.4")
-set(PICO_ANS_FORTH_TERMINAL "uart")
+set(PICO_ANS_FORTH_VERSION "1.0.0-alpha.6")
+set(PICO_ANS_FORTH_TERMINAL "PicoCalc")
+# set(PICO_ANS_FORTH_TERMINAL "Pico 2")
 
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)
@@ -40,6 +41,9 @@ set(FORTH_SOURCES
     compiler/compiler.S
     interpreter/interpreters.S
     interpreter/parse.S
+    terminals/picocalc/display.c
+    terminals/picocalc/font.c
+    terminals/picocalc/keyboard.c
     wordsets/block/core.S
     wordsets/core/arithmetic.S
     wordsets/core/character.S
@@ -84,15 +88,20 @@ pico_set_program_name(pico-ans-forth "pico-ans-forth")
 pico_set_program_url(pico-ans-forth "https://github.com/BlairLeduc/pico-ans-forth")
 pico_set_program_version(pico-ans-forth "${PICO_ANS_FORTH_VERSION}")
 
-if(PICO_ANS_FORTH_TERMINAL STREQUAL "uart")
+if(PICO_ANS_FORTH_TERMINAL STREQUAL "Pico 2")
     target_compile_definitions(pico-ans-forth PRIVATE PICO_ANS_FORTH_TERMINAL_UART)
-elseif(PICO_ANS_FORTH_TERMINAL STREQUAL "picocalc")
+elseif(PICO_ANS_FORTH_TERMINAL STREQUAL "PicoCalc")
     target_compile_definitions(pico-ans-forth PRIVATE PICO_ANS_FORTH_TERMINAL_PICOCALC)
 endif()
 
 # Add the standard library to the build
 target_link_libraries(pico-ans-forth
         pico_stdlib
+        hardware_dma
+        hardware_gpio
+        hardware_i2c
+        hardware_spi
+        hardware_timer
         hardware_uart
 )
 

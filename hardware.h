@@ -4,17 +4,13 @@
 //  See LICENSE for details.
 //
 
-#ifndef HARDWARE_H
-#define HARDWARE_H
-
-void check_for_user_interrupt();
-
+#pragma once
 
 // These functions must be implemented to support the terminal interface
 void terminal_init();
 
 // Terminal Input
-int __key_available();
+bool __key_available();
 int __key();
 
 // Terminal Output
@@ -26,5 +22,3 @@ void __emit(char ch);
 extern void __type_error(int error_code);
 extern void forth_start();
 extern void _quit();
-
-#endif // HARDWARE_H

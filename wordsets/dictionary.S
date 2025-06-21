@@ -1057,6 +1057,8 @@
 
     defcode "(SLITERAL)",,S_LIT, _s_lit
 
+    defcode "BATTERY",,BATTERY,_battery
+
     @   DOCOL [core]
     @defconst "DOCOL",DOCOL,_docol
 
