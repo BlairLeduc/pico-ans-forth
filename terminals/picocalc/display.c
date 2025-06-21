@@ -4,6 +4,17 @@
 //  See LICENSE for details.
 //
 
+//
+//  PicoCalc LCD display driver
+//
+//  This driver implements a simple ANSI terminal interface for the PicoCalc LCD display
+//  using the ST7789P LCD controller.
+//
+//  It is optimised for a character-based display with a fixed-width, 8-pixel wide font
+//  and 65K colours in the RGB565 format. This driver is requires little memory as a
+//  frame buffer is not used.
+//
+
 #include "pico/stdlib.h"
 #include "pico/multicore.h"
 #include "hardware/spi.h"
@@ -30,7 +41,7 @@ uint8_t cursor_y = 0;                   // cursor y position for drawing
 
 uint16_t lcd_y_offset = 0;              // offset for vertical scrolling
 
-semaphore_t spi_sem;
+semaphore_t lcd_sem;
 
 static uint16_t palette[9] = {
     RGB(0, 0, 0),                       // 0 Black
@@ -45,12 +56,13 @@ static uint16_t palette[9] = {
 };
 
 static repeating_timer_t cursor_timer;
-uint16_t char_buffer[GLYPH_WIDTH * GLYPH_HEIGHT] __attribute__ ((aligned(4))); 
+uint16_t char_buffer[8 * GLYPH_HEIGHT] __attribute__ ((aligned(4))); 
 extern uint8_t font[];
 
 // Reset the LCD display
 static void lcd_reset()
 {
+    // Blip the reset pin to reset the LCD controller
     gpio_set_pulls(LCD_RST, false, false);
     gpio_pull_up(LCD_RST);
     gpio_put(LCD_RST, 1);
@@ -66,13 +78,13 @@ static void lcd_reset()
 // Protect the SPI bus with a semaphore
 static void lcd_aquire()
 {
-    sem_acquire_blocking(&spi_sem);
+    sem_acquire_blocking(&lcd_sem);
 }
 
 // Release the SPI bus
 static void lcd_release()
 {
-    sem_release(&spi_sem);
+    sem_release(&lcd_sem);
 }
 
 // Send a command
@@ -93,7 +105,7 @@ static void lcd_write_data(uint8_t len, ...)
     gpio_put(LCD_CSX, 0);
     for (uint8_t i = 0; i < len; i++)
     {
-        uint8_t data = va_arg(args, int); // Get the next byte of data
+        uint8_t data = va_arg(args, int); // get the next byte of data
         spi_write_blocking(spi1, &data, 1);
     }
     gpio_put(LCD_CSX, 1);
@@ -110,7 +122,7 @@ static void lcd_write16_data(uint8_t len, ...)
     spi_set_format(spi1, 16, 0, 0, SPI_MSB_FIRST);
     for (uint8_t i = 0; i < len; i++)
     {
-        uint16_t data = va_arg(args, int); // Get the next half-word of data
+        uint16_t data = va_arg(args, int); // get the next half-word of data
         spi_write16_blocking(spi1, &data, 1);
     }
     spi_set_format(spi1, 8, 0, 0, SPI_MSB_FIRST);
@@ -179,7 +191,7 @@ static void lcd_blit(uint16_t* pixels, int x, int y, int width, int height)
 // Draw a rectangle on the display
 static void lcd_rect(uint16_t color, int x, int y, int width, int height)
 {
-    static uint16_t pixels[WIDTH]; // Max width of your display
+    static uint16_t pixels[WIDTH];
 
     for (int row = 0; row < height; row++) {
         for (int i = 0; i < width; i++) {
@@ -190,6 +202,9 @@ static void lcd_rect(uint16_t color, int x, int y, int width, int height)
 }
 
 // Set the scrolling area of the display
+//
+// This forum post provides a good explanation of how scrolling on the ST7789P display works:
+// https://forum.arduino.cc/t/st7735s-scrolling/564506
 static void lcd_define_scrolling(int top_fixed_area, int bottom_fixed_area)
 {
     int scroll_area = HEIGHT - (top_fixed_area + bottom_fixed_area);
@@ -240,34 +255,40 @@ static void lcd_clear_screen()
 }
 
 // Draw a character at the specified position
-static void lcd_putc(int x, int y, char c)
+// - I optimised the heck out of this function, and it didn't make any perceived difference
+//   in performance. I left it as is. :(
+static void lcd_putc(int x, int y, uint8_t c)
 {
-    int offset = ((uint8_t)c) * GLYPH_HEIGHT;
+    uint8_t* glyph = &font[c * GLYPH_HEIGHT];
+    uint16_t* buffer = char_buffer;
+    int fore = palette[foreground];
+    int back = palette[background];
 
-    for (int j = 0; j < GLYPH_HEIGHT; j++, offset++)
+    for (int i = 0; i < GLYPH_HEIGHT; i++, glyph++)
     {
-        for (int i = 0; i < GLYPH_WIDTH; i++)
-        {
-            int mask = 1 << (GLYPH_WIDTH - i - 1);
-            char_buffer[j * GLYPH_WIDTH + i] = (font[offset] & mask)
-                ? palette[foreground]
-                : palette[background];
-        }
+        *(buffer++) = (*glyph & 0x80) ? fore : back;
+        *(buffer++) = (*glyph & 0x40) ? fore : back;
+        *(buffer++) = (*glyph & 0x20) ? fore : back;
+        *(buffer++) = (*glyph & 0x10) ? fore : back;
+        *(buffer++) = (*glyph & 0x08) ? fore : back;
+        *(buffer++) = (*glyph & 0x04) ? fore : back;
+        *(buffer++) = (*glyph & 0x02) ? fore : back;
+        *(buffer++) = (*glyph & 0x01) ? fore : back; 
     }
 
-    lcd_blit(char_buffer, x, y, GLYPH_WIDTH, GLYPH_HEIGHT);
+    lcd_blit(char_buffer, x << 3, y * GLYPH_HEIGHT, 8, GLYPH_HEIGHT);
 }
 
 // Draw the cursor at the current position
 static void lcd_draw_cursor()
 {
-    lcd_rect(palette[CURSOR_COLOR], cursor_x * GLYPH_WIDTH, ((cursor_y + 1) * GLYPH_HEIGHT) - 1, GLYPH_WIDTH, 1);
+    lcd_rect(palette[CURSOR_COLOR], cursor_x << 3, ((cursor_y + 1) * GLYPH_HEIGHT) - 1, 8, 1);
 }
 
 // Erase the cursor at the current position
 static void lcd_erase_cursor()
 {
-    lcd_rect(palette[background], cursor_x * GLYPH_WIDTH, ((cursor_y + 1) * GLYPH_HEIGHT) - 1, GLYPH_WIDTH, 1);
+    lcd_rect(palette[background], cursor_x << 3, ((cursor_y + 1) * GLYPH_HEIGHT) - 1, 8, 1);
 }
 
 
@@ -277,7 +298,7 @@ static void lcd_erase_cursor()
 
 bool display_emit_available()
 {
-    return true;                        // Always available for output in this implementation
+    return true;                        // always available for output in this implementation
 }
 
 void display_emit(char ch)
@@ -307,7 +328,7 @@ void display_emit(char ch)
         }
         else if (ch >= 0x20 && ch < 0x7F) // printable characters
         {
-            lcd_putc(x++ * GLYPH_WIDTH, y * GLYPH_HEIGHT, ch);
+            lcd_putc(x++, y, ch);
         }
     }
     else if (state == STATE_ESCAPE)
@@ -441,16 +462,24 @@ void display_emit(char ch)
         x = 0;
         y++;
     }
+
     if (y < 0)                          // scroll at top of the screen
     {
-        lcd_scroll_down();
-        y = 0;
+        while (y < 0)                   // scroll until y is non-negative
+        {
+            lcd_scroll_down();          // scroll down to make space at the top
+            y++;
+        }
     }
     if (y > MAX_ROW)                    // scroll at bottom of the screen
     {
-        lcd_scroll_up();
-        y = MAX_ROW;
+        while (y > MAX_ROW)             // scroll until y is within bounds
+        {
+            lcd_scroll_up();            // scroll up to make space at the bottom
+            y--;
+        }
     }
+
     cursor_x = x;                       // update cursor position for drawing
     cursor_y = y;                       // update cursor position for drawing
     lcd_draw_cursor();                      // draw the cursor at the new position
@@ -460,7 +489,7 @@ bool on_cursor_timer(repeating_timer_t *rt)
 {
     static bool cursor_visible = false;
 
-    if (sem_available(&spi_sem) == 0)
+    if (sem_available(&lcd_sem) == 0)
     {
         return true; // If SPI is not available, do not toggle cursor
     }
@@ -507,67 +536,69 @@ void display_init()
 
     lcd_reset();                        // reset the LCD controller
 
-    lcd_write_cmd(LCD_CMD_PGC);         // Positive Gamma Control
+    lcd_write_cmd(LCD_CMD_PGC);         // positive gamma control
     lcd_write_data(15,
         0x00, 0x03, 0x09, 0x08,
         0x16, 0x0A, 0x3F, 0x78,
         0x4C, 0x09, 0x0A, 0x08,
         0x16, 0x1A, 0x0F);
 
-    lcd_write_cmd(LCD_CMD_NGC);         // Negative Gamma Control
+    lcd_write_cmd(LCD_CMD_NGC);         // negative gamma control
     lcd_write_data(15,
         0x00, 0x16, 0x19, 0x03,
         0x0F, 0x05, 0x32, 0x45,
         0x46, 0x04, 0x0E, 0x0D,
         0x35, 0x37, 0x0F);
 
-    lcd_write_cmd(LCD_CMD_PWR1);        // Power Control 1
+    lcd_write_cmd(LCD_CMD_PWR1);        // power control 1
     lcd_write_data(2, 0x17, 0x15);      // 0x17=VREG1OUT=4.6V, 0x15=VREG2OUT=4.4V
 
-    lcd_write_cmd(LCD_CMD_PWR2);        // Power Control 2
+    lcd_write_cmd(LCD_CMD_PWR2);        // power control 2
     lcd_write_data(1, 0x41);            // 0x41=VGH=4.4V, VGL=-4.4V
 
-    lcd_write_cmd(LCD_CMD_VCMPCTL);     // VCOM Control
+    lcd_write_cmd(LCD_CMD_VCMPCTL);     // VCOM control
     lcd_write_data(3, 0x00, 0x12, 0x80);// 0x80=0.85V
 
     lcd_write_cmd(LCD_CMD_MADCTL);      // Memory Access Control
     lcd_write_data(1, 0x48);            // 0x48=BGR
 
-    lcd_write_cmd(LCD_CMD_COLMOD);      // Pixel Format Set
+    lcd_write_cmd(LCD_CMD_COLMOD);      // pixel format set
     lcd_write_data(1, 0x55);            // 16 bit color (565) for SPI
 
-    lcd_write_cmd(LCD_CMD_IFMODE);      // Interface Mode Control
+    lcd_write_cmd(LCD_CMD_IFMODE);      // interface mode control
     lcd_write_data(1, 0x00);            // 4-wire SPI
 
-    lcd_write_cmd(LCD_CMD_FRMCTR1);     // Frame Rate Control (in normal mode)
+    lcd_write_cmd(LCD_CMD_FRMCTR1);     // frame rate control (in normal mode)
     lcd_write_data(2, 0xD0, 0x11);      // 0xD0=60Hz, 0x11=1/1 duty cycle
 
-    lcd_write_cmd(LCD_CMD_INVON);        // Display Inversion On
+    lcd_write_cmd(LCD_CMD_INVON);       // display inversion on
 
-    lcd_write_cmd(LCD_CMD_DIC);         // Display Inversion Control
+    lcd_write_cmd(LCD_CMD_DIC);         // display inversion control
     lcd_write_data(1, 0x02);            // 0x02=DCI=1, DIC=0
 
-    lcd_write_cmd(LCD_CMD_DFC);         // Display Function Control
+    lcd_write_cmd(LCD_CMD_DFC);         // display function control
     lcd_write_data(3, 0x02, 0x02, 0x3B); // 0x02=SS=1, GS=1, SM=0, ISC=0, BGR=1
 
-    lcd_write_cmd(LCD_CMD_EMS);         // Entry Mode Set
+    lcd_write_cmd(LCD_CMD_EMS);         // entry mode set
     lcd_write_data(1, 0xC6);            // 0xC6=SS=1, GS=1, SM=0, ISC=0, BGR=1
 
-    lcd_write_cmd(LCD_CMD_E9);          // Adjust Control
+    lcd_write_cmd(LCD_CMD_E9);          // adjust control
     lcd_write_data(1, 0x00);            // 0x00=default
-    lcd_write_cmd(LCD_CMD_F7);          // Adjust Control 3
+    lcd_write_cmd(LCD_CMD_F7);          // adjust control 3
     lcd_write_data(4, 0xA9, 0x51, 0x2C, 0x82); // 0xA9=default, 0x51=default, 0x2C=default, 0x82=default
 
-    lcd_write_cmd(LCD_CMD_SLPOUT);      // Sleep Out
-    sleep_ms(120);                      // Wait for the display to wake up
+    lcd_write_cmd(LCD_CMD_SLPOUT);      // sleep out
+    sleep_ms(120);                      // wait for the display to wake up
     
     gpio_put(LCD_CSX, 1);
 
-    sem_init(&spi_sem, 1, 1);
+    // Prevent the bliking cursor from interfering with other operations
+    sem_init(&lcd_sem, 1, 1);
 
-    lcd_define_scrolling(0, 0);        // No fixed areas for scrolling
+    lcd_define_scrolling(0, 0);        // no fixed areas for scrolling
     lcd_clear_screen();
     lcd_display_on();
 
-    add_repeating_timer_ms(500, on_cursor_timer, NULL, &cursor_timer); // Start polling for keys every 100ms
+    // Blink the cursor every second (500 ms on, 500 ms off)
+    add_repeating_timer_ms(500, on_cursor_timer, NULL, &cursor_timer);
 }

@@ -4,9 +4,27 @@
 //  See LICENSE for details.
 //
 
-#include "pico/binary_info.h"
+//
+//  PicoCalc keyboard driver
+//
+//  This driver implements a simple keyboard interface for the PicoCalc
+//  using the I2C bus. It handles key presses and releases, modifier keys,
+//  and user interrupts.
+//
+//  The PicoCalc only allows for polling the keyboard, and the API is
+//  limited. To support user interrupts, we need to poll the keyboard and
+//  buffer the key events for when needed, except for the user interrupt
+//  where we process it immediately. We use a semaphore to protect access
+//  to the I2C bus and a repeating timer to poll for the key events.
+//
+//  We also provide functions to interact with other features in the system,
+//  such as reading the battery level.
+//
+
 #include "pico/stdlib.h"
 #include "pico/platform.h"
+#include "pico/binary_info.h"
+#include "pico/multicore.h"
 #include "hardware/gpio.h"
 #include "hardware/i2c.h"
 
@@ -14,34 +32,44 @@
 
 extern volatile bool user_interrupt;
 
-bool key_control = false;               // Control key state
-bool key_shift = false;                 // Shift key state
-bool key_alt = false;                   // Alt key state
+// Modifier key states
+static bool key_control = false;               // control key state
+static bool key_shift = false;                 // shift key state
 
-// Add these definitions at the top of the file, after the UART defines
-static volatile uint8_t rx_buffer[BUFFER_SIZE];
+static volatile uint8_t rx_buffer[KBD_BUFFER_SIZE];
 static volatile uint16_t rx_head = 0;
 static volatile uint16_t rx_tail = 0;
 static repeating_timer_t key_timer;
+static semaphore_t key_sem;
 
 
-bool on_timer(repeating_timer_t *rt)
+// Protect the SPI bus with a semaphore
+static void keyboard_aquire()
+{
+    sem_acquire_blocking(&key_sem);
+}
+
+// Release the SPI bus
+static void keyboard_release()
+{
+    sem_release(&key_sem);
+}
+
+static bool on_timer(repeating_timer_t *rt)
 {
     uint8_t buffer[2];
+
+    if (sem_available(&key_sem) == 0)
+    {
+        return true;                    // if SPI is not available, skip this timer tick
+    }
+
+    // Repeat this loop until we exhaust the FIFO on the "south bridge".
     do
     {
-        buffer[0] = REG_ID_FIF; // command to check if key is available
-        int writeResult = i2c_write_blocking(I2C_KBD_MOD, I2C_KBD_ADDR, buffer, 1, false);
-        if (writeResult == PICO_ERROR_GENERIC || writeResult == PICO_ERROR_TIMEOUT)
-        {
-            return true; // I2C write error
-        }
-
-        int readResult = i2c_read_blocking(I2C_KBD_MOD, I2C_KBD_ADDR, buffer, 2, false);
-        if (readResult == PICO_ERROR_GENERIC || readResult == PICO_ERROR_TIMEOUT)
-        {
-            return true; // I2C read error
-        }
+        buffer[0] = KBD_REG_FIF;        // command to check if key is available
+        i2c_write_blocking(i2c1, KBD_ADDR, buffer, 1, false);
+        i2c_read_blocking(i2c1, KBD_ADDR, buffer, 2, false);
 
         if (buffer[0] != 0)
         {
@@ -58,13 +86,9 @@ bool on_timer(repeating_timer_t *rt)
                 {
                     key_shift = true;
                 }
-                else if (key_code == KEY_MOD_ALT)
-                {
-                    key_alt = true;
-                }
                 else if (key_code == KEY_BREAK)
                 {
-                    user_interrupt = true; // Set user interrupt flag
+                    user_interrupt = true; // set user interrupt flag
                 }
 
                 continue;
@@ -76,8 +100,6 @@ bool on_timer(repeating_timer_t *rt)
                     key_control = false;
                 } else if (key_code == KEY_MOD_SHL || key_code == KEY_MOD_SHR) {
                     key_shift = false;
-                } else if (key_code == KEY_MOD_ALT) {
-                    key_alt = false;
                 } else {
                     // If a key is released, we return the key code
                     // This allows us to handle the key release in the main loop
@@ -93,13 +115,13 @@ bool on_timer(repeating_timer_t *rt)
                             ch &= ~0x20;
                         }
                     }
-                    if (ch == 0x0A) // Enter key is returned as LF
+                    if (ch == 0x0A)     // enter key is returned as LF
                     {
-                        ch = 0x0D; // Convert LF to CR
+                        ch = 0x0D;      // convert LF to CR
                     }
 
-                    uint16_t next_head = (rx_head + 1) & (BUFFER_SIZE - 1);
-                    rx_buffer[rx_head] = ch; // Store the key state and code in the buffer
+                    uint16_t next_head = (rx_head + 1) & (KBD_BUFFER_SIZE - 1);
+                    rx_buffer[rx_head] = ch;
                     rx_head = next_head;
                 }
             }
@@ -107,18 +129,21 @@ bool on_timer(repeating_timer_t *rt)
         }
     }
     while (buffer[0] != 0);
+
     return true;
 }
 
 void keyboard_init() {
-    i2c_init(I2C_KBD_MOD, I2C_KBD_SPEED);
-    gpio_set_function(I2C_KBD_SCL, GPIO_FUNC_I2C);
-    gpio_set_function(I2C_KBD_SDA, GPIO_FUNC_I2C);
-    gpio_pull_up(I2C_KBD_SCL);
-    gpio_pull_up(I2C_KBD_SDA);
-    bi_decl(bi_2pins_with_func(I2C_KBD_SDA, I2C_KBD_SCL, GPIO_FUNC_I2C));
+    i2c_init(i2c1, KBD_BAUDRATE);
+    gpio_set_function(KBD_SCL, GPIO_FUNC_I2C);
+    gpio_set_function(KBD_SDA, GPIO_FUNC_I2C);
+    gpio_pull_up(KBD_SCL);
+    gpio_pull_up(KBD_SDA);
 
-    add_repeating_timer_ms(100, on_timer, NULL, &key_timer); // Start polling for keys every 100ms
+    sem_init(&key_sem, 1, 1);           // initialize semaphore for I2C access
+
+    // Poll every 200 ms for key events
+    add_repeating_timer_ms(200, on_timer, NULL, &key_timer);
 }
 
 bool keyboard_key_available()
@@ -129,29 +154,22 @@ bool keyboard_key_available()
 int keyboard_get_key()
 {
     while (!keyboard_key_available()) {
-        tight_loop_contents();          // Wait for a character
+        tight_loop_contents();          // wait for a character
     }
         
     uint8_t ch = rx_buffer[rx_tail];
-    rx_tail = (rx_tail + 1) & (BUFFER_SIZE - 1);
+    rx_tail = (rx_tail + 1) & (KBD_BUFFER_SIZE - 1);
     return ch;
 }
 
 int read_battery() {
     uint8_t buffer[2];
+    buffer[0] = KBD_REG_BAT;
 
-    buffer[0] = REG_ID_BAT;
-    int writeResult = i2c_write_blocking(I2C_KBD_MOD, I2C_KBD_ADDR, buffer, 1, false);
-    if (writeResult == PICO_ERROR_GENERIC || writeResult == PICO_ERROR_TIMEOUT)
-    {
-        return -1; // I2C write error
-    }
-
-    int readResult = i2c_read_blocking(I2C_KBD_MOD, I2C_KBD_ADDR, buffer, 2, false);
-    if (readResult == PICO_ERROR_GENERIC || readResult == PICO_ERROR_TIMEOUT)
-    {
-        return -1; // I2C read error
-    }
+    keyboard_aquire();
+    i2c_write_blocking(i2c1, KBD_ADDR, buffer, 1, false);
+    i2c_read_blocking(i2c1, KBD_ADDR, buffer, 2, false);
+    keyboard_release();
 
     return buffer[1];
 }

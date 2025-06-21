@@ -6,26 +6,23 @@
 
 #pragma once
 
-#define I2C_KBD_MOD         i2c1
-#define I2C_KBD_SDA         6
-#define I2C_KBD_SCL         7
+#define KBD_SDA             6
+#define KBD_SCL             7
 
-#define I2C_KBD_SPEED       10000       // if dual i2c, then the speed of keyboard i2c should be 10khz
-#define I2C_KBD_ADDR        0x1F
+#define KBD_BAUDRATE       10000        // if dual i2c, then the speed of keyboard i2c should be 10khz
+#define KBD_ADDR            0x1F
 
-#define REG_ID_VER          0x01        // fw version
-#define REG_ID_CFG          0x02        // config
-#define REG_ID_INT          0x03        // interrupt status
-#define REG_ID_KEY          0x04        // key status
-#define REG_ID_BKL          0x05        // backlight
-#define REG_ID_DEB          0x06        // debounce cfg
-#define REG_ID_FRQ          0x07        // poll freq cfg
-#define REG_ID_RST          0x08        // reset
-#define REG_ID_FIF          0x09        // fifo
-#define REG_ID_BK2          0x0A        // keyboard backlight
-#define REG_ID_BAT          0x0b        // battery
-#define REG_ID_C64_MTX      0x0c        // read c64 matrix
-#define REG_ID_C64_JS       0x0d        // joystick io bits
+#define KBD_REG_VER         0x01        // fw version
+#define KBD_REG_CFG         0x02        // config
+#define KBD_REG_INT         0x03        // interrupt status
+#define KBD_REG_KEY         0x04        // key status
+#define KBD_REG_BKL         0x05        // backlight
+#define KBD_REG_DEB         0x06        // debounce cfg
+#define KBD_REG_FRQ         0x07        // poll freq cfg
+#define KBD_REG_RST         0x08        // reset
+#define KBD_REG_FIF         0x09        // fifo
+#define KBD_REG_BK2         0x0A        // keyboard backlight
+#define KBD_REG_BAT         0x0b        // battery
 
 #define KEY_MOD_ALT         0xA1
 #define KEY_MOD_SHL         0xA2
@@ -65,9 +62,10 @@
 #define KEY_F9              0x89
 #define KEY_F10             0x90
 
-#define BUFFER_SIZE         32
+#define KBD_BUFFER_SIZE     32
 
 void keyboard_init();
 bool keyboard_key_available();
 int keyboard_get_key();
+
 int read_battery();

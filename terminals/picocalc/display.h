@@ -71,7 +71,7 @@
 #define DEFAULT_FOREGROUND          8   // white phosphor
 #define DEFAULT_BACKGROUND          0   // black
 #define CURSOR_COLOR                8   // white phosphor
-#define COLUMNS     (WIDTH/GLYPH_WIDTH) // number of glyphs that fit in a line
+#define COLUMNS     (WIDTH>>3) // number of glyphs that fit in a line
 #define ROWS        (HEIGHT/GLYPH_HEIGHT) // number of lines that fit in a page
 #define MAX_COL     (COLUMNS - 1)       // maximum column index (0-based)
 #define MAX_ROW     (ROWS - 1)          // maximum row index (0-based)

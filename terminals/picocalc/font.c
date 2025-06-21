@@ -4,6 +4,14 @@
 //  See LICENSE for details.
 //
 
+//
+//  PicoCalc LCD display font (8x10)
+//
+//  This font is strongly based on the original font used in the VT100 terminal,
+//  with some tweaks from the VT200 terminal font, and modified to fit the
+//  lower resolution of the PicoCalc LCD display.
+//
+
 #include "pico/stdlib.h"
 #include "font.h"
 
@@ -648,7 +656,7 @@ const uint8_t font[] = {
     0b10000110,
     0b01111010,
     0b00000010,
-    0b10000100,
+    0b00000100,
     0b01111000,
     0b00000000,
     0b00000000,
@@ -1380,7 +1388,7 @@ const uint8_t font[] = {
     0b00001100,
     0b00010000,
     0b00010000,
-    0b01100000,
+    0b00100000,
     0b00010000,
     0b00010000,
     0b00001100,
@@ -1391,7 +1399,7 @@ const uint8_t font[] = {
     0b00010000,
     0b00010000,
     0b00010000,
-    0b00000000,
+    0b00010000,
     0b00010000,
     0b00010000,
     0b00010000,
@@ -1402,7 +1410,7 @@ const uint8_t font[] = {
     0b01100000,
     0b00010000,
     0b00010000,
-    0b00001100,
+    0b00001000,
     0b00010000,
     0b00010000,
     0b01100000,

@@ -4,6 +4,16 @@
 //  See LICENSE for details.
 //
 
+//
+// Pico 2 (W) serial driver
+//
+// This driver implements a simple serial interface for the Pico 2 using the
+// UART peripheral. It handles character reception and transmission,
+// user interrupts (Ctrl+C), and provides functions to check for available keys
+// and emit characters. The driver uses a circular buffer to store received characters
+// and an interrupt handler to process incoming data.
+//
+
 #include "pico/stdlib.h"
 #include "hardware/uart.h"
 #include "hardware/irq.h"
@@ -12,23 +22,23 @@
 
 extern volatile bool user_interrupt;
 
-static volatile uint8_t rx_buffer[BUFFER_SIZE];
+static volatile uint8_t rx_buffer[UART_BUFFER_SIZE];
 static volatile uint16_t rx_head = 0;
 static volatile uint16_t rx_tail = 0;
 
 // Interrupt handler for UART RX
 void on_uart_rx()
 {
-    while (uart_is_readable(UART_ID))
+    while (uart_is_readable(uart0))
     {
-        uint8_t ch = uart_getc(UART_ID);
+        uint8_t ch = uart_getc(uart0);
         // Check for user interrupt (Ctrl+C)
         if (ch == 0x03)                 // Ctrl+C
         {
             user_interrupt = true;      // Set the user interrupt flag
             continue;                   // Skip adding this character to the buffer
         }
-        uint16_t next_head = (rx_head + 1) & (BUFFER_SIZE - 1);
+        uint16_t next_head = (rx_head + 1) & (UART_BUFFER_SIZE - 1);
         rx_buffer[rx_head] = ch;
         rx_head = next_head;
     }
@@ -37,33 +47,29 @@ void on_uart_rx()
 void serial_init()
 {
         // Set up our UART
-    uart_init(UART_ID, BAUD_RATE);
+    uart_init(uart0, UART_BAUDRATE);
 
     // Set the TX and RX pins by using the function select on the GPIO
     // Set datasheet for more information on function select
-    gpio_set_function(UART_TX_PIN, GPIO_FUNC_UART);
-    gpio_set_function(UART_RX_PIN, GPIO_FUNC_UART);
+    gpio_set_function(UART_TX, GPIO_FUNC_UART);
+    gpio_set_function(UART_RX, GPIO_FUNC_UART);
     
     // Set UART flow control CTS/RTS, we don't want these, so turn them off
-    uart_set_hw_flow(UART_ID, false, false);
+    uart_set_hw_flow(uart0, false, false);
 
     // Set our data format
-    uart_set_format(UART_ID, DATA_BITS, STOP_BITS, PARITY);
+    uart_set_format(uart0, UART_DATABITS, UART_STOPBITS, UART_PARITY);
 
     // Turn off FIFO's - we want to do this character by character
-    uart_set_fifo_enabled(UART_ID, false);
+    uart_set_fifo_enabled(uart0, false);
 
     // Set up a RX interrupt
-    // We need to set up the handler first
-    // Select correct interrupt for the UART we are using
-    int UART_IRQ = UART_ID == uart0 ? UART0_IRQ : UART1_IRQ;
-
     // And set up and enable the interrupt handlers
-    irq_set_exclusive_handler(UART_IRQ, on_uart_rx);
-    irq_set_enabled(UART_IRQ, true);
+    irq_set_exclusive_handler(UART0_IRQ, on_uart_rx);
+    irq_set_enabled(UART0_IRQ, true);
 
     // Now enable the UART to send interrupts - RX only
-    uart_set_irq_enables(UART_ID, true, false);
+    uart_set_irq_enables(uart0, true, false);
 }
 
 bool serial_key_available()
@@ -78,13 +84,13 @@ int serial_get_key()
     }
         
     uint8_t ch = rx_buffer[rx_tail];
-    rx_tail = (rx_tail + 1) & (BUFFER_SIZE - 1);
+    rx_tail = (rx_tail + 1) & (UART_BUFFER_SIZE - 1);
     return ch;
 }
 
 bool serial_emit_available()
 {
-    return uart_is_writable(UART_ID);
+    return uart_is_writable(uart0);
 }
 
 void serial_emit(char ch)
@@ -93,5 +99,5 @@ void serial_emit(char ch)
     {
         tight_loop_contents();          // Wait until we can write
     }
-    uart_putc(UART_ID, ch);             // Send the character
+    uart_putc(uart0, ch);             // Send the character
 }
