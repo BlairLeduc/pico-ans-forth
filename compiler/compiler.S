@@ -92,6 +92,23 @@ __comma:
     str r2, [r1]                        @ update DP
     bx lr
 
+    @   6.1.0860    C, ( char -- )                      “c-comma”
+    @
+    @   Reserve space for one character in the data space and store char in the space. If the data-space
+    @   pointer is character aligned when C, begins execution, it will remain character aligned when
+    @   C, finishes execution. An ambiguous condition exists if the data-space pointer is not
+    @   character-aligned prior to execution of C,.
+
+    .global _c_comma
+    .thumb_func
+_c_comma:
+    popd r0                             @ get the character to store
+    movw r1, :lower16:var_DP            @ load the address of the DP variable
+    movt r1, :upper16:var_DP
+    ldr r2, [r1]                        @ get the current value of the DP
+    strb r0, [r2], #1                   @ store the character
+    str r2, [r1]                        @ update DP
+    NEXT
 
     @   6.1.2540    ] ( -- )                            “right-bracket”
     @
@@ -210,7 +227,6 @@ _allot:
     .thumb_func
 _create:
     bl __create
-    pushd r0
     NEXT
 
     .global __create
@@ -220,6 +236,8 @@ __create:
 
     ldr r4, =var_DP
     ldr r5, [r4]                        @ get the current value of DP
+    add r5, #3
+    and r5, #~3                         @ align the DP to a 4-byte boundary
     eor r0, r0
     str r0, [r5], #4                    @ store the locate field (0)
     ldr r6, =var_LATEST
@@ -265,15 +283,33 @@ msg_not_unique:
     .global _does
     .thumb_func
 _does:
+    ldr r3, =var_STATE
+    ldr r3, [r3]                        @ get the current state
+    cmp r3, #0
+    beq 1f                              @ if in interpretation state, just return the string  
+
+    @ compilation
     ldr r2, =var_DP
     ldr r2, [r2]                        @ get the current DP value
-    ldr r3, =_dodoes
-    str r3, [r2], #4                    @ store SLITERAL
-    ldr r3, =PAREN_DOES
-    str r3, [r2], #4                    @ store the (DOES>) address
+    ldr r3, =DOES
+    str r3, [r2], #4
+    mov r3, #0x4B00                     @ ldr r3, [pc, #0]
+    strh r3, [r2], #2
+    mov r3, #0x4718                     @ bx r3
+    strh r3, [r2], #2
+    ldr r3, =_paren_does                @ address of the (DOES>) that the above will jump to
+    orr r3, #1                          @ set the thumb bit
+    str r3, [r2], #4
     ldr r3, =var_DP
     str r2, [r3]                        @ update DP
     NEXT
+
+    @ run-time
+1:  ldr r2, =var_DP
+    ldr r2, [r2]                        @ get the current DP value
+    @ update the code field to point to the next word after this one
+    str r5, [r2, #-4]
+    b _exit
 
 
     @   6.2.2395    UNUSED ( -- u )

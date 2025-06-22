@@ -35,7 +35,7 @@
 @       ldr r0, [r5], #4                @ r5 points to the next instruction
 @       ldr r1, [r0]                    @ get the interpreter address stored in the execution token
 @       orr r1, #1                      @ set the thumb bit (make sure we stay in thumb mode)
-@       blx r1                          @ branch to the interpreter/hand-crafted code
+@       bx r1                          @ branch to the interpreter/hand-crafted code
 @
 @   NEXT is called by the previous word's EXIT, which brings us to _docol.
 
@@ -60,49 +60,39 @@ _exit:
     b _quit                             @ return to the terminal
 
 @
-@   DODOES executes a list of execution tokens.
+@   (DOES>) executes a list of execution tokens.
 @
-@   Parameters:
-@       r0 - the code field address of the word executing
-@       r5 - return instruction pointer (used when we call EXIT)
-@
-@   Basic structure:
+@   Defining word:
 @
 @   : MSG   CREATE DOES> COUNT TYPE ;
-@                                                         update the code field (from create) to point to (DOES>)
-@   +--------+---------+---+---+---+---+--------+--------+-|------+---------+--------+--------+--------+
-@   | LOCATE | LINK    | 3 | M | S | G | DOCOL  | CREATE | DODOES | (DOES>) | COUNT  | TYPE   | EXIT   |
-@   +--------+---------+---+---+---+---+--------+--------+--------+-^-------+--------+--------+--------+
-@                                                                   |
+@                                                         update the code field (from create) to point to the defining word
+@   +--------+---------+---+---+---+---+--------+--------+-|------+---------+--------+--------+--------+--------+
+@   | LOCATE | LINK    | 3 | M | S | G | DOCOL  | CREATE | DOES>  | ldr/bx  | addr   | COUNT  | TYPE   | EXIT   |
+@   +--------+---------+---+---+---+---+--------+--------+--------+-^-------+-|------+--------+--------+--------+
+@                                                                   |        address of (DOES>)
 @   MSG (CR) 2 C, 0D C, 0A C,                               +-------+
 @                                                value      |
 @   +--------+---------+---+---+---+---+---+---+---+---+----|---+----+----+----+----+
 @   | LOCATE | LINK    | 4 | ( | C | R | ) | 0 | 0 | 0 | a-addr | 02 | 0D | 0A | 00 |
 @   +--------+---------+---+---+---+---+---+---+---+---+----|---+----+----+----+----+
-@                                                          was DOVAR
+@                                                          was (CREATE)
 @
-@   (DOES>) pushes r5 (parameter area) on the stack, and then does contnues as DOCOL would.
-@   After DODOES updates the code field, it will EXIT.
+@   (DOES>) pushes the address of the data field area on the stack, and and then executes
+@   the words that followed DOES> in the defining word.
+@   After DOES> updates the code field, it will EXIT.
 @  
 
-
-    .global _dodoes
-    .thumb_func
-_dodoes:
-    popd r1                             @ pop the code field address of the word executing
-    ldr r2, =_paren_does
-    str r2, [r1]                        @ update the code field to point to (DOES>)
-1:  bl _exit
-
-
+    @   r0 = address of the defined word, r0 + 4 = address of the data field
+    @   r1 = address of DOES> in the defining word, r1 + 8 = first word after DOES>
     .global _paren_does
     .thumb_func
 _paren_does:
     pushr r5                            @ push the return instruction pointer on to the return stack
-    add r1, r0, #4                      @ r5 = pointer to the parameter area
-    pushd r1                            @ push the data field area on to the data stack
-    add r5, r0, #4                      @ set r5 to point to the first execution token in this word
-    NEXT                                @ call the interpreter or hand-crafted code of the execution token in r5.
+    add r2, r0, #4                      @ r5 = pointer to the data field area
+    pushd r2                            @ push the data field area on to the data stack
+    add r5, r1, #8                      @ skip over the code that got us here
+    and r5, #~3                         @ align r5 to a 4-byte boundary
+    NEXT
 
 
     .global _paren_create
@@ -213,7 +203,7 @@ __interpret:
     ldr r5, =interpret_done_xt
     ldr r1, [r0]
     orr r1, #1                          @ set the thumb bit   
-    blx r1                              @ execute the code field
+    bx r1                              @ execute the code field
 interpret_done:
     mov r0, #-1                         @ return true
     pop {pc}
@@ -247,7 +237,7 @@ _execute:
     popd r0                             @ get xt into r0
     ldr r1, [r0]
     orr r1, #1                          @ set the thumb bit   
-    blx r1     
+    bx r1     
 
     @   6.1.0070    ' ( “<spaces>name” -- xt ) “tick”
     @
@@ -273,7 +263,6 @@ __tick:
     bl __find                           @ find in dictionary
     cmp r1, #0
     beq __word_not_found                @ if not found, branch to error handling
-    bl __to_cfa                         @ convert dictionary entry to code field address
     pop {r4-r5, pc}                     @ return
 
 

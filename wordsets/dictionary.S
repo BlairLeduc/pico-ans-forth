@@ -980,10 +980,7 @@
     .word EXIT
 
     @   6.1.0860    C, ( char —- ) [core]
-    defword "C,",,C_COMMA
-    .word HERE, STOREBYTE               @ store the character in the compiled image
-    .word LIT, 1, DP, ADDSTORE          @ increment dp pointer by 1 byte
-    .word EXIT
+    defcode "C,",,C_COMMA,_c_comma
 
 
 @
@@ -1041,10 +1038,8 @@
 @
 
     @ 6.1.1250      DOES> ( xt —- ) [core]
-    defword "DOES>",CB_PRECEDENCE,DOES
+    defcode "DOES>",CB_PRECEDENCE,DOES,_does
 
-    @               (DOES>) [core]
-    defword "(DOES>)",CB_PRECEDENCE,PAREN_DOES
 @
 @   Internal
 @
@@ -1061,9 +1056,6 @@
 
     @   DOCOL [core]
     @defconst "DOCOL",DOCOL,_docol
-
-    @   DODOES [core]
-    @defconst "DODOES",DODOES,_dodoes
 
     @   R0                              The address of the top of the return stack.
     defconst "R0",RZ,return_stack_top

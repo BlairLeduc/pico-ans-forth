@@ -37,7 +37,7 @@
     ldr r0, [r5], #4                    @ r5 points to the next instruction
     ldr r1, [r0]                        @ get the interpreter address stored in the execution token (indirect)
     orr r1, #1                          @ set the thumb bit (make sure we stay in thumb mode)
-    blx r1                              @ branch to the interpreter/hand-crafted code
+    bx r1                               @ branch to the interpreter/hand-crafted code
     .endm
 
 @

@@ -52,7 +52,7 @@ static uint16_t palette[9] = {
     RGB(255, 0, 255),                   // 5 Agenta
     RGB(0, 255, 255),                   // 6 Cyan
     RGB(255, 255, 255),                 // 7 White
-    RGB(192, 228, 255),                 // 8 White phosphor
+    RGB(216, 240, 255),                 // 8 White phosphor
 };
 
 static repeating_timer_t cursor_timer;

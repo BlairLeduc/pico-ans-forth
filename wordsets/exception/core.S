@@ -22,7 +22,7 @@ _catch:
     pushr r1                            @ push the return address
     ldr r0, [r0]                        @ get the address of the code field
     orr r0, #1                          @ set the thumb bit
-    blx r0                              @ execute
+    bx r0                              @ execute
 _catch_finish:
     popr r0                             @ remove the exception frame
     popr r0

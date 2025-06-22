@@ -38,7 +38,9 @@ When debugging, I use [VS Code](https://code.visualstudio.com) and the [Raspberr
 ## Status
 
 ### ANS Forth
-I have implemented words from the core and tools wordsets, and I am starting the implementation of defining words.
+I have implemented words from the core and tools wordsets, and I completed the implementation of defining words.
+
+I am now working literals and constants, followed by structural programming.
 
 ### PicoCalc
 I have reliable drivers for the LCD and Keyboard on the PicoCalc. The SD card and sound is not supported. 
