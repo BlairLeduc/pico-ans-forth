@@ -63,3 +63,11 @@ _battery:
     bl southbridge_read_battery
     pushd r0
     NEXT
+
+    .global _bootsel
+    .thumb_func
+_bootsel:
+    eor r0, r0                     @ Clear r0
+    eor r1, r1                     @ Clear r1
+    bl rom_reset_usb_boot
+    // never returns

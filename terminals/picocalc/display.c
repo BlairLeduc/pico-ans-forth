@@ -48,7 +48,7 @@ uint16_t char_buffer[8 * GLYPH_HEIGHT] __attribute__ ((aligned(4)));
 semaphore_t lcd_sem;
 static repeating_timer_t cursor_timer;
 
-// Wait for ~40 ns (12 cycles at 200 MHz)
+// Wait for ~40 ns (12 cycles at 252MHz, lots of margin at lower clock speeds)
 static inline void wait_40ns() {
     __asm__ volatile (
         "nop\n\t"

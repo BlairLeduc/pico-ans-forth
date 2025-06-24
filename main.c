@@ -17,6 +17,6 @@ extern void forth_start(); // Implemented in assembly
 
 int main()
 {
-    terminal_init();
+    __init();
     forth_start();
 }

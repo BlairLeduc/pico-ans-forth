@@ -7,7 +7,7 @@
 #pragma once
 
 // These functions must be implemented to support the terminal interface
-void terminal_init();
+void __init();
 
 // Terminal Input
 bool __key_available();

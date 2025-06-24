@@ -20,9 +20,9 @@
 #include "terminals/uart0/uart0.h"
 #include "terminals/uart0/serial.h"
 
-static void (*hardware_init)(void) = uart0_init;
+static void (*terminal_init)(void) = uart0_init;
 static bool (*terminal_key_available)(void) = serial_key_available;
-static int (*terminal_get_key)(void) = serial_get_key;
+static int  (*terminal_get_key)(void) = serial_get_key;
 static bool (*terminal_emit_available)(void) = serial_emit_available;
 static void (*terminal_emit)(char ch) = serial_emit;
 
@@ -34,9 +34,9 @@ static void (*terminal_emit)(char ch) = serial_emit;
 #include "terminals/picocalc/display.h"
 #include "terminals/picocalc/keyboard.h"
 
-static void (*hardware_init)(void) = picocalc_init;
+static void (*terminal_init)(void) = picocalc_init;
 static bool (*terminal_key_available)(void) = keyboard_key_available;
-static int (*terminal_get_key)(void) = keyboard_get_key;
+static int  (*terminal_get_key)(void) = keyboard_get_key;
 static bool (*terminal_emit_available)(void) = display_emit_available;
 static void (*terminal_emit)(char ch) = display_emit;
 
@@ -72,9 +72,9 @@ void check_for_user_interrupt()
 //
 
 // Initialize the terminal hardware
-void terminal_init()
+void __init()
 {
-    hardware_init();
+    terminal_init();
 }
 
 

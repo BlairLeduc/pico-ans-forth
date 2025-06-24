@@ -1054,6 +1054,8 @@
 
     defcode "BATTERY",,BATTERY,_battery
 
+    defcode "BOOTSEL",,BOOTSEL,_bootsel
+
     @   DOCOL [core]
     @defconst "DOCOL",DOCOL,_docol
 
