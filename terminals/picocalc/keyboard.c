@@ -40,26 +40,39 @@ static volatile uint8_t rx_buffer[KBD_BUFFER_SIZE];
 static volatile uint16_t rx_head = 0;
 static volatile uint16_t rx_tail = 0;
 static repeating_timer_t key_timer;
-static semaphore_t key_sem;
+static semaphore_t sb_sem;
 
+
+//
+//  Protect access to the "South Bridge"
+//
 
 // Protect the SPI bus with a semaphore
-static void keyboard_aquire()
+static void southbridge_aquire()
 {
-    sem_acquire_blocking(&key_sem);
+    sem_acquire_blocking(&sb_sem);
 }
 
 // Release the SPI bus
-static void keyboard_release()
+static void southbridge_release()
 {
-    sem_release(&key_sem);
+    sem_release(&sb_sem);
 }
 
-static bool on_timer(repeating_timer_t *rt)
+
+//
+//  Keyboard Driver
+//
+//  This section implements the keyboard driver, which polls the
+//  keyboard for key events and buffers them for processing. It uses
+//  a repeating timer to poll the keyboard at regular intervals.
+//
+
+static bool on_keyboard_timer(repeating_timer_t *rt)
 {
     uint8_t buffer[2];
 
-    if (sem_available(&key_sem) == 0)
+    if (sem_available(&sb_sem) == 0)
     {
         return true;                    // if SPI is not available, skip this timer tick
     }
@@ -140,10 +153,11 @@ void keyboard_init() {
     gpio_pull_up(KBD_SCL);
     gpio_pull_up(KBD_SDA);
 
-    sem_init(&key_sem, 1, 1);           // initialize semaphore for I2C access
+    // initialize semaphore for I2C access
+    sem_init(&sb_sem, 1, 1);
 
-    // Poll every 200 ms for key events
-    add_repeating_timer_ms(200, on_timer, NULL, &key_timer);
+    // poll every 200 ms for key events
+    add_repeating_timer_ms(200, on_keyboard_timer, NULL, &key_timer);
 }
 
 bool keyboard_key_available()
@@ -162,14 +176,25 @@ int keyboard_get_key()
     return ch;
 }
 
-int read_battery() {
+
+
+//
+//  "South Bridge" functions
+//
+//  The secondary processor on the PicoCalc acts as a "south bridge",
+//  providing access to the keyboard, battery, and other peripherals.
+//
+//  This ssection provides access to the other features of the system.
+//
+
+int southbridge_read_battery() {
     uint8_t buffer[2];
     buffer[0] = KBD_REG_BAT;
 
-    keyboard_aquire();
+    southbridge_aquire();
     i2c_write_blocking(i2c1, KBD_ADDR, buffer, 1, false);
     i2c_read_blocking(i2c1, KBD_ADDR, buffer, 2, false);
-    keyboard_release();
+    southbridge_release();
 
     return buffer[1];
 }

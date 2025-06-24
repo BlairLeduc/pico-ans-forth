@@ -6,7 +6,7 @@
 @   This file contains the Standard Forth Core workset (constants)
 @
 
-    .include "forth.inc"
+    .include "forth.S"
 
     @   CB_PRECEDENCE                   The IMMEDIATE flag's actual value.
     defconst "CB_PRECEDENCE",_CB_PRECEDENCE,CB_PRECEDENCE

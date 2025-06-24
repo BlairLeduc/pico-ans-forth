@@ -7,7 +7,7 @@
 @   See 2.2.1 Arithmetic and Shift Operators (FPH, p54)
 @
 
-    .include "forth.inc"
+    .include "forth.S"
 
     .text
 

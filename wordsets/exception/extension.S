@@ -6,6 +6,6 @@
 @   This file contains the Standard Forth Exception Extension wordset.
 @
 
-    .include "forth.inc"
+    .include "forth.S"
 
     .text

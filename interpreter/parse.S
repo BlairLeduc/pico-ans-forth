@@ -4,7 +4,7 @@
 @   See LICENSE for details.
 @
 
-    .include "forth.inc"
+    .include "forth.S"
     
     .text
 

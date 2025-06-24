@@ -12,7 +12,44 @@
 #include "hardware/uart.h"
 #include "hardware/gpio.h"
 #include "hardware/i2c.h"
-#include "hardware.h"
+#include "terminal.h"
+
+
+#ifdef PICO_ANS_FORTH_TERMINAL_UART
+
+#include "terminals/uart0/uart0.h"
+#include "terminals/uart0/serial.h"
+
+static void (*hardware_init)(void) = uart0_init;
+static bool (*terminal_key_available)(void) = serial_key_available;
+static int (*terminal_get_key)(void) = serial_get_key;
+static bool (*terminal_emit_available)(void) = serial_emit_available;
+static void (*terminal_emit)(char ch) = serial_emit;
+
+#endif // PICO_ANS_FORTH_TERMINAL_UART
+
+#ifdef PICO_ANS_FORTH_TERMINAL_PICOCALC
+
+#include "terminals/picocalc/picocalc.h"
+#include "terminals/picocalc/display.h"
+#include "terminals/picocalc/keyboard.h"
+
+static void (*hardware_init)(void) = picocalc_init;
+static bool (*terminal_key_available)(void) = keyboard_key_available;
+static int (*terminal_get_key)(void) = keyboard_get_key;
+static bool (*terminal_emit_available)(void) = display_emit_available;
+static void (*terminal_emit)(char ch) = display_emit;
+
+#endif // PICO_ANS_FORTH_TERMINAL_PICOCALC
+
+//
+// Terminal User Interrupt
+//
+
+// External references (implemented in assembly)
+extern void __type_error(int error_code);
+extern void forth_start();
+extern void _quit();
 
 volatile bool user_interrupt = false;
 
@@ -28,19 +65,19 @@ void check_for_user_interrupt()
     }
 }
 
-#ifdef PICO_ANS_FORTH_TERMINAL_UART
 
 
-#include "termals/uart0/serial.h"
+//
+// Terminal Initialization
+//
 
-
-// Initialize the terminal hardware (UART)
+// Initialize the terminal hardware
 void terminal_init()
 {
-    stdio_init_all();
-
-    serial_init();
+    hardware_init();
 }
+
+
 
 //
 // Terminal Input functions
@@ -50,7 +87,8 @@ void terminal_init()
 bool __key_available()
 {
     check_for_user_interrupt();          // Check for user interrupts
-    return serial_key_available(); 
+    return terminal_key_available(); 
+}
 
 // Get a character from the RX buffer, blocking until one is available
 int __key()
@@ -60,8 +98,10 @@ int __key()
         tight_loop_contents();          // Wait for a character
     }
     
-    return serial_get_key();
+    return terminal_get_key();
 }
+
+
 
 //
 // Terminal Output functions
@@ -71,7 +111,7 @@ int __key()
 bool __emit_available()
 {
     check_for_user_interrupt();
-    return serial_emit_available();
+    return terminal_emit_available();
 }
 
 // Write a character to the UART
@@ -81,64 +121,5 @@ void __emit(char ch)
     {
         tight_loop_contents();          // Wait until we can write
     }
-    serial_emit(ch);
+    terminal_emit(ch);
 }
-
-#endif // PICO_ANS_FORTH_TERMINAL_UART
-
-#ifdef PICO_ANS_FORTH_TERMINAL_PICOCALC
-
-#include "terminals/picocalc/display.h"
-#include "terminals/picocalc/keyboard.h"
-
-void terminal_init()
-{
-    // Debug only
-    stdio_init_all();
-    uart_init(uart0, 115200);
-
-    uart_set_format(uart0, 8, 1, UART_PARITY_NONE);  // 8-N-1
-    uart_set_fifo_enabled(uart0, false);
-    // end debug only
-
-display_init();
-    keyboard_init();
-}
-
-// Terminal Input
-bool __key_available()
-{
-    check_for_user_interrupt();
-    return keyboard_key_available();
-}
-
-int __key()
-{
-    while (!__key_available())
-    {
-        tight_loop_contents();          // Wait for a character
-    }
-    
-    return keyboard_get_key();
-}
-
-// Terminal Output
-bool __emit_available() {
-    check_for_user_interrupt();
-    return display_emit_available(); // Always available for output in this implementation
-}
-
-void __emit(char ch)
-{
-    while (!__emit_available())
-    {
-        tight_loop_contents();          // Wait until we can write
-    }
-
-    display_emit(ch);
-}
-
-#endif // PICO_ANS_FORTH_TERMINAL_PICOCALC
-
-
-

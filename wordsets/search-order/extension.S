@@ -6,7 +6,7 @@
 @   This file contains the Standard Forth Search-Order Extension wordset.
 @
 
-    .include "forth.inc"
+    .include "forth.S"
 
     .text
     

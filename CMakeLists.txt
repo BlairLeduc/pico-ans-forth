@@ -25,9 +25,9 @@ endif()
 # ====================================================================================
 set(PICO_BOARD pimoroni_pico_plus2_w_rp2350 CACHE STRING "Board type")
 set(PICO_DEOPTIMIZED_DEBUG ON)      # Disable optimizations.
-set(PICO_ANS_FORTH_VERSION "1.0.0-alpha.8")
+set(PICO_ANS_FORTH_VERSION "1.0.0-alpha.9")
 set(PICO_ANS_FORTH_TERMINAL "PicoCalc")
-# set(PICO_ANS_FORTH_TERMINAL "Pico 2")
+#set(PICO_ANS_FORTH_TERMINAL "Pico 2")
 
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)
@@ -44,6 +44,9 @@ set(FORTH_SOURCES
     terminals/picocalc/display.c
     terminals/picocalc/font.c
     terminals/picocalc/keyboard.c
+    terminals/picocalc/picocalc.c
+    terminals/uart0/serial.c
+    terminals/uart0/uart0.c
     wordsets/block/core.S
     wordsets/core/arithmetic.S
     wordsets/core/character.S
@@ -61,21 +64,21 @@ set(FORTH_SOURCES
     wordsets/string/core.S
     wordsets/tools/core.S
     wordsets/dictionary.S
-    forth.S
+    bootstrap.S
     memory.S
-    hardware.c
+    terminal.c
     main.c)
 
-# Add forth.inc as a dependency
+# Add forth.S as a dependency
 set_source_files_properties(
-    ${CMAKE_CURRENT_SOURCE_DIR}/forth.inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/forth.S
     PROPERTIES HEADER_FILE_ONLY TRUE
 )
 
-# Make sure targets depending on forth.inc are rebuilt when it changes
+# Make sure targets depending on forth.S are rebuilt when it changes
 set_property(
     SOURCE ${FORTH_SOURCES}
-    APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/forth.inc
+    APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/forth.S
 )
 
 # Add executable. Default name is the project name

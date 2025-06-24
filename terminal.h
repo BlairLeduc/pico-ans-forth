@@ -17,8 +17,3 @@ int __key();
 bool __emit_available();
 void __emit(char ch);
 
-
-// External references (implemented in assembly)
-extern void __type_error(int error_code);
-extern void forth_start();
-extern void _quit();

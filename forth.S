@@ -3,302 +3,334 @@
 @   Copyright Blair Leduc.
 @   See LICENSE for details.
 @
-@   This file contains the Standard Forth initialisation and support code.
+@   This file contains common definitions and macros used by the assembler.
 @
 
-    .include "forth.inc"
-    #include "version.h"
+    .syntax unified
+    .cpu cortex-m33
 
-@   Register Usage:
-@       r0-r4:      General purpose/scratch registers
-@       r5:         Instruction register [I]
-@       r6:         Return stack register [R]
-@       r7:         Float stack register [F] 
-@       r8:         Data stack register [S]
-@       r9:         Reserved by RP2040 SDK (Platform register)
-@       r10-r11:    Reserved for C compiler (Frame pointers)
-@       r12:        IP (Intra-Procedure-call scratch)
-@       r13:        SP (Stack pointer)
-@       r14:        LR (Link register)
-@       r15:        PC (Program counter)
+    @ Define the initial size of the stacks and storage space.
+    .set DATA_STACK_SIZE, 512           @ 128 cells for the data stack
+    .set RETURN_STACK_SIZE, 512         @ 128 cells for the return stack
+    .set FLOAT_STACK_SIZE, 512          @ 128 cells for the float stack
+    .set PAD_SIZE, 128                  @ 128 bytes for the scratch PAD
+    .set DATA_SPACE_SIZE, 393216        @ 384K (TODO: how do we get an accurate value?) for data space
+    .set TERMINAL_INPUT_BUFFER_SIZE, 80 @ 80 bytes is standard for the terminal input buffer
+    .set S_QUOTED_STRING_BUFFER_SIZE, 80 @ 80 bytes for the S" quoted string buffer
 
-@   Naming conventions:
-@       LABEL:      Secondary word that completes with EXIT.
-@       _label:     Primary word that completes with NEXT.
-@       __label:    Internal routine where parameters and outputs
-@.                  in r0-r3 and completes with bx lr or pop {..., pc}.
-
+@ #if defined(PICO_ANS_FORTH_TERMINAL_UART)
+@ .warning "Using UART terminal formatting"
+@     @ Output formatting (80 characters per line, 16 bytes per row in dump)
+@     .equ FMT_CPL, 80                    @ characters per line (Pico 2)
+@     .equ FMT_BPR, 16                    @ bytes per row in dump
+@ #elif defined(PICO_ANS_FORTH_TERMINAL_PICOCALC)
+@ .warning "Using PicoCalc terminal formatting"
+@     @ Output formatting (40 characters per line, 4 bytes per row in dump)
+@     .equ FMT_CPL, 40                    @ characters per line (PicoCalc)
+@     .equ FMT_BPR, 4                     @ bytes per row in dump
+@ #endif
 
 
 @
-@   Interpreter bootstrap
+@   The NEXT macro is used to execute the next instruction stored in the word's data fields.
+@
+@   We use indirect threaded code that is excuted using the DOCOL interpreter. The DOCOL interpreter
+@   executes each execution token stored in the data fields of the word.
 @
 
+    .macro NEXT
+    ldr r0, [r5], #4                    @ r5 points to the next instruction
+    ldr r1, [r0]                        @ get the interpreter address stored in the execution token (indirect)
+    orr r1, #1                          @ set the thumb bit (make sure we stay in thumb mode)
+    bx r1                               @ branch to the interpreter/hand-crafted code
+    .endm
+
+@
+@   Stack Macros
+@
+@   These macros are used to manipulate the data stack, return stack and floating point stack.
+@
+
+@   The data stack (r8) is used to store data values.
+    .macro pushd reg
+    str \reg, [r8, #-4]!                @ push reg on to data stack
+    .endm
+
+    .macro popd reg
+    ldr \reg, [r8], #4                  @ pop reg from data stack
+    .endm
+
+@   The return stack (r6) is used to store return addresses for function calls.
+    .macro pushr reg
+    str \reg, [r6, #-4]!                @ push reg on to return stack
+    .endm
+
+    .macro popr reg
+    ldr \reg, [r6], #4                  @ pop reg from return stack
+    .endm
+
+@   The floating point stack (r7) is used to store floating point values.
+    .macro pushf reg
+    str \reg, [r7, #-4]!                @ push reg on to floating point stack
+    .endm
+
+    .macro popf reg
+    ldr \reg, [r7], #4                  @ pop reg from floating point stack
+    .endm
+
+@
+@   1.1.2 Dictionary
+@
+@   Control bits (FPH, p6)
+@
+
+    .equ CB_PRECEDENCE, 0x80            @ precedence or immediate bit
+    .equ CB_SMUDGE,     0x20            @ smudge  or hiddent bit
+    .equ CB_LENGTH,     0x1f            @ remove the control bits
+
+@
+@   Dictionary Macros
+@
+@   These macros are used to define words in flash that appear in the dictionary.
+@
+
+@
+@   Create a "compiled" (DOCOL) definition for a word in the dictionary.
+@
+@   This dictionary definition is stored in the .section .rodata section, which is read-only.
+@   The code field points to the DOCOL interpreter.
+@
+@   Example: : DOUBLE DUP + ;
+@                                                               first execution token in definition
+@   +--------+--------+---+---+---+---+---+---+---+---+--------+-|------+--------+--------+
+@   | LOCATE | LINK   | 6 | D | O | U | B | L | E | 0 | DOCOL  | DUP    | +      | EXIT   |
+@   +--------+--------+---+---+---+---+---+---+---+---+-|------+--------+--------+--------+
+@                                                      points to the DOCOL interpreter.
+
+    .macro defword name, control=0, label
     .section .rodata
-    .balign 4
-bootstrap:
-    .word QUIT 
-   
-@
-@   To get things going:
-@
-@   bootstrap <- r5
-@   |
-@   v
-@   +--------+
-@   | QUIT   |
-@   +--------+
-@
-@   We load r5 to hold the address of the first execution token (QUIT) to execute,
-@   which points to _quit. We are using indirect threaded code.
-@
-@   We use the macro NEXT to get started. The NEXT macro calls the interpreter or
-@   hand-crafted code of the execution token in r5.
-@
-@   What NEXT does:  loads r0 with the execution token pointed to by r5 (QUIT)
-@   and (since indirect) NEXT loads from r0 the address of the interpreter or
-@   hand-crafted code:
-@
-@   +--------+
-@   | QUIT   |
-@   +-|------+
-@     |
-@     r0
-@      |
-@      +------------------------------------------------+
-@                                                       |
-@   +--------+--------+---+---+---+---+---+---+---+---+-v------+
-@   | LOCATE | LINK   | 4 | Q | U | I | T | 0 | 0 | 0 | _quit  |
-@   +--------+--------+---+---+---+---+---+---+---+---+--------+
-@
-@   and calls, in this case, the hand-crafted code, _quit.
-@
+    .balign 4                           @ make sure we are on a 4 byte boundary
+    .word 0                             @ locate
+1:
+    .word link                          @ link
+    .byte 3f - 2f + \control            @ control bits + length byte
+2:
+    .ascii "\name"                      @ the name
+3:
+    .balign 4                           @ pad with 0's to next 4 byte boundary
+    .global \label
+\label:                                 @ CFA for the word
+    .word _docol                        @ code field - points to the DOCOL interpreter
 
-    .text
-    .balign 4
-
-@
-@   Forth System Initialisation
-@
-
-    .global forth_start
-    .thumb_func
-forth_start:
-    @ print welcome message
-    bl __type_welcome
-
-    @ Bootstrap the interpreter
-    movw r5, :lower16:bootstrap
-    movt r5, :upper16:bootstrap
-    NEXT                                @ run the interpreter!
-
-
-    @   6.1.2050    QUIT ( -- ) ( R: i*x -- )
-    @
-    @   Empty the return stack, store zero in SOURCE-ID if it is present, make the user input device
-    @   the input source, and enter interpretation state. Do not display a message. Repeat the
-    @   following:
-    @       - Accept a line from the input source into the input buffer, set >IN to zero, and interpret.
-    @       - Display the implementation-defined system prompt if in interpretation state, all
-    @         processing has been completed, and no ambiguous condition exists.
-
-    .global _quit
-    .thumb_func
-_quit:
-    @ Reset the stacks and variables
-    movw r8, :lower16:data_stack_top
-    movt r8, :upper16:data_stack_top    @ initialise the data stack pointer
-
-    movw r7, :lower16:float_stack_top
-    movt r7, :upper16:float_stack_top   @ initialise the float stack
-    
-    eor r0, r0
-    ldr r1, =var_SOURCE_ID
-    str r0, [r1]                        @ clear the source ID (0 = teminal input stream)
-    ldr r1, =var_STATE
-    str r0, [r1]                        @ clear the state variable (0 = interpreting, 1 = compiling)
-
-0:  movw r6, :lower16:return_stack_top
-    movt r6, :upper16:return_stack_top  @ initialise the return stack
-
-1:  bl __refill                         @ refill the input stream
-    cmp r0, #0                          @ check for input error
-    beq 0b                              @ error, reset return stack and refill input stream
-
-2:  bl __interpret                      @ process the input stream
-    mov r4, r0                          @ r4 = the result of the interpretation (0 = no input, 1 = ok, -1 = error)
-    bl __check_stacks                   @ check system status
-    cmp r0, #ERR_OK                     @ check if there was an error
-    bne 4f                              @ if there was an error, branch to error handling
-    bl __key_available                  @ check if there is a user abort (if so, __key_available never returns)   
-    cmp r4, #0                          @ check if buffer empty
-    bne 2b
-
-    ldr r1, =var_STATE
-    ldr r0, [r1]                        @ load the state (0 = interpreting, 1 = compiling)
-    cmp r0, #0                          @ check if we are interpreting or compiling
-    beq 3f                              @ if interpreting, branch to ok prompt
-
-    ldr r0, =compile_prompt
-    bl __type_cstr                      @ print the compile prompt if compiling
-    b 1b
-
-3:  ldr r0, =ok_prompt
-    bl __type_cstr                      @ print the ok prompt if interpreting
-    b 1b
-
-4:  bl __type_error                     @ emit the error message
-    b _quit
-
-ok_prompt:
-    .asciz " ok\015\012"
-compile_prompt:
-    .asciz "\015\012  "
-    .balign 4
+    .set link, 1b
+    @ list of word pointers follow (each point to the CFA of the word)
+    .endm
 
 
 @
-@ No-op
+@   Create a code definition for a word in the dictionary.
 @
-
-    .global _noop
-    .thumb_func
-_noop:
-    NEXT
-
-
+@   This dictionary definition is stored in the .section .rodata section, which is read-only.
+@   The code field points to the assembly code that implements the behaviour of the word
+@   which is stored in the .text section.
 @
-@   Type the welcome message
+@   **NOTE**: This dictionary entry structure is only created for words that have
+@             hand-crafted code, which are these that are baked into the flash memory.
+@             The text interpreter will never create this structure at runtime.
 @
-
-    .global __type_welcome
-    .thumb_func
-__type_welcome:
-    push {lr}
-    ldr r0, =.Lmsg_welcome
-    bl __type_cstr
-    pop {pc}
-
-.Lmsg_welcome:
-    .ascii "\033cANS Forth for the "
-    .ascii PICO_ANS_FORTH_TERMINAL
-    .ascii "\n\rCopyright Blair Leduc.\n\r"
-    .ascii "Version "
-    .ascii PICO_ANS_FORTH_VERSION
-    .asciz "\n\r"
-    .balign 4
-
-
+@   Example: DUP
 @
-@   Type an error message
-@
+@   +--------+---------+---+---+---+---+--------+
+@   | LOCATE | LINK    | 3 | D | U | P | _dup   |
+@   +--------+---------+---+---+---+---+-|------+
+@                                      points to the assembly code used to write DUP,
+@                                      and completes with NEXT.
 
-    .global __type_error
-    .thumb_func
-__type_error:
-    push {r4, lr}
-    mov r4, r0
-    cmp r0, #0
-    bge 2f                              @ if r0 is positive, it is an app throw code
-    cmp r0, #-58
-    bge 3f                              @ if r0 is -58 or greater, it is a standard throw code
-
-    ldr r0, =.Lerror_sys
-    bl __type_cstr
-
-1:  mov r0, r4
-    bl __dot
-    ldr r0, =.Lerror_cr
-    bl __type_cstr
-    pop {r4, pc}
-    
-2:  ldr r0, =.Lerror_app
-    bl __type_cstr
-    b 1b
-
-    // r0 in [-58, 0], index = -r0
-3:  rsb r2, r0, #0
-    ldr r3, =.Lerror_table
-    ldr r3, [r3, r2, lsl #2]
-    mov r0, r3
-    bl __type_cstr
-    pop {r4, pc}
-    
+    .macro defcode name, control=0, label, code
     .section .rodata
-    .balign 4
-.Lerror_table:
-    .word .Lerror_0, .Lerror_1, .Lerror_2, .Lerror_3, .Lerror_4
-    .word .Lerror_5, .Lerror_6, .Lerror_7, .Lerror_8, .Lerror_9
-    .word .Lerror_10, .Lerror_11, .Lerror_12, .Lerror_13, .Lerror_14
-    .word .Lerror_15, .Lerror_16, .Lerror_17, .Lerror_18, .Lerror_19
-    .word .Lerror_20, .Lerror_21, .Lerror_22, .Lerror_23, .Lerror_24
-    .word .Lerror_25, .Lerror_26, .Lerror_27, .Lerror_28, .Lerror_29
-    .word .Lerror_30, .Lerror_31, .Lerror_32, .Lerror_33, .Lerror_34
-    .word .Lerror_35, .Lerror_36, .Lerror_37, .Lerror_38, .Lerror_39
-    .word .Lerror_40, .Lerror_41, .Lerror_42, .Lerror_43, .Lerror_44
-    .word .Lerror_45, .Lerror_46, .Lerror_47, .Lerror_48, .Lerror_49
-    .word .Lerror_50, .Lerror_51, .Lerror_52, .Lerror_53, .Lerror_54
-    .word .Lerror_55, .Lerror_56, .Lerror_57, .Lerror_58
+    .balign 4                           @ make sure we are on a 4 byte boundary
+    .word 0                             @ locate
+1:
+    .word link                          @ link
+    .byte 3f - 2f + \control            @ control + length byte
+2:
+    .ascii "\name"                      @ the name
+3:
+    .balign 4                           @ pad with 0's to 4 byte boundary
+    .global \label
+\label:                                 @ CFA for the word
+    .word \code                         @ code field - points to the assembly code for the word (must be defined
+                                        @ in the .text section)
+    .set link, 1b
+    .endm
 
-.Lerror_0:    .asciz "No error\n\r"
-.Lerror_1:    .asciz "ABORT\n\r"
-.Lerror_2:    .asciz "ABORT with message\n\r"
-.Lerror_3:    .asciz "Stack overflow\n\r"
-.Lerror_4:    .asciz "Stack underflow\n\r"
-.Lerror_5:    .asciz "Return stack overflow\n\r"
-.Lerror_6:    .asciz "Return stack underflow\n\r"
-.Lerror_7:    .asciz "Do-loops nested too deeply during execution\n\r"
-.Lerror_8:    .asciz "Dictionary overflow\n\r"
-.Lerror_9:    .asciz "Invalid memory address\n\r"
-.Lerror_10:   .asciz "Division by zero\n\r"
-.Lerror_11:   .asciz "Result out of range\n\r"
-.Lerror_12:   .asciz "Argument type mismatch\n\r"
-.Lerror_13:   .asciz "Undefined word\n\r"
-.Lerror_14:   .asciz "Interpreting a compile-only word\n\r"
-.Lerror_15:   .asciz "Invalid FORGET\n\r"
-.Lerror_16:   .asciz "Attempt to use zero-length string as a name\n\r"
-.Lerror_17:   .asciz "Pictured numeric output string overflow\n\r"
-.Lerror_18:   .asciz "Parsed string overflow\n\r"
-.Lerror_19:   .asciz "Definition name too long\n\r"
-.Lerror_20:   .asciz "Write to a read-only location\n\r"
-.Lerror_21:   .asciz "Unsupported operation\n\r"
-.Lerror_22:   .asciz "Control structure mismatch\n\r"
-.Lerror_23:   .asciz "Address alignment exception\n\r"
-.Lerror_24:   .asciz "Invalid numeric argument\n\r"
-.Lerror_25:   .asciz "Return stack imbalance\n\r"
-.Lerror_26:   .asciz "Loop parameters unavailable\n\r"
-.Lerror_27:   .asciz "Invalid recursion\n\r"
-.Lerror_28:   .asciz "User interrupt\n\r"
-.Lerror_29:   .asciz "Compiler nesting\n\r"
-.Lerror_30:   .asciz "Obsolescent feature\n\r"
-.Lerror_31:   .asciz ">BODY used on non-CREATEd definition\n\r"
-.Lerror_32:   .asciz "Invalid name argument (e.g., TO xxx)\n\r"
-.Lerror_33:   .asciz "Block read exception\n\r"
-.Lerror_34:   .asciz "Block write exception\n\r"
-.Lerror_35:   .asciz "Invalid block number\n\r"
-.Lerror_36:   .asciz "Invalid file position\n\r"
-.Lerror_37:   .asciz "File I/O exception\n\r"
-.Lerror_38:   .asciz "Non-existent file\n\r"
-.Lerror_39:   .asciz "Unexpected end of file\n\r"
-.Lerror_40:   .asciz "Invalid BASE for floating point conversion\n\r"
-.Lerror_41:   .asciz "Loss of precision\n\r"
-.Lerror_42:   .asciz "Floating-point divide by zero\n\r"
-.Lerror_43:   .asciz "Floating-point result out of range\n\r"
-.Lerror_44:   .asciz "Floating-point stack overflow\n\r"
-.Lerror_45:   .asciz "Floating-point stack underflow\n\r"
-.Lerror_46:   .asciz "Floating-point invalid argument\n\r"
-.Lerror_47:   .asciz "Compilation word list deleted\n\r"
-.Lerror_48:   .asciz "Invalid POSTPONE\n\r"
-.Lerror_49:   .asciz "Search-order overflow\n\r"
-.Lerror_50:   .asciz "Search-order underflow\n\r"
-.Lerror_51:   .asciz "Compilation word list changed\n\r"
-.Lerror_52:   .asciz "Control-flow stack overflow\n\r"
-.Lerror_53:   .asciz "Exception stack overflow\n\r"
-.Lerror_54:   .asciz "Floating-point underflow\n\r"
-.Lerror_55:   .asciz "Floating-point unidentified fault\n\r"
-.Lerror_56:   .asciz "QUIT\n\r"
-.Lerror_57:   .asciz "Exception in sending or receiving a character\n\r"
-.Lerror_58:   .asciz "[IF], [ELSE], or [THEN] exception\n\r"
-.Lerror_app:  .asciz "Application exception: "
-.Lerror_sys:  .asciz "Unknown system exception: "
-.Lerror_cr:   .asciz "\n\r"
+
+@
+@   Create a constant definition for a word in the dictionary.
+@
+@   This dictionary definition is stored in the .section .rodata section, which is read-only.
+@   A small word defintion is used to define a constant in the dictionary that pushes the value onto the
+@   data stack when executed.
+@
+@   Example: 10 CONSTANT TEN
+@                                                    constant value
+@   +--------+---------+---+---+---+---+------------+-|------+
+@   | LOCATE | LINK    | 3 | T | E | N | (CONSTANT) | 10     |
+@   +--------+---------+---+---+---+---+-|----------+--------+
+@                                       points to the (CONSTANT) interpreter.
+
+    .macro defconst name, label, value
+    .section .rodata
+    .balign 4                           @ make sure we are on a 4 byte boundary
+    .word 0                             @ locate
+1:
+    .word link                          @ link
+    .byte 3f - 2f                       @ length byte
+2:
+    .ascii "\name"                      @ the name
+3:
+    .balign 4                           @ pad with 0's to 4 byte boundary
+    .global \label
+\label:                                 @ CFA for the word
+    .word _paren_constant               @ code field - points to the DOCOL interpreter
+    .word \value                        @ value of the constant
+
+    .set link, 1b
+    .endm
+
+
+@
+@   Create a value definition for a word in the dictionary.
+@
+@   This dictionary definition is stored in the .data section, which is writable.
+@   A small word defintion is used to define a value in the dictionary that pushes the value onto the
+@   data stack when executed.
+@
+@   Use TO and +TO to change the value.
+@
+@   Example: 42 VALUE VAL
+@                                                    value
+@   +--------+---------+---+---+---+---+------------+-|------+
+@   | LOCATE | LINK    | 3 | V | A | L | (CONSTANT) | 42     |
+@   +--------+---------+---+---+---+---+-|----------+--------+
+@                                       points to the (CONSTANT) interpreter.
+
+    .macro defvalue name, label, value
+    .data
+    .balign 4                           @ make sure we are on a 4 byte boundary
+    .word 0                             @ locate
+1:
+    .word link                          @ link
+    .byte 3f - 2f                       @ length byte
+2:
+    .ascii "\name"                      @ the name
+3:
+    .balign 4                           @ pad with 0's to 4 byte boundary
+    .global \label
+\label:                                 @ CFA for the word
+    .word _paren_constant               @ code field - points to the DOCOL interpreter
+    .word \value                        @ value of the constant
+
+    .set link, 1b
+    .endm
+
+
+@
+@   Create a variable definition for a word in the dictionary.
+@
+@   This dictionary definition is stored in the .data section, which is writable.
+@   The data field stores the value of the variable.
+@
+@   Example: VARIABLE DATA
+@
+@                                                                  variable value
+@   +--------+---------+---+---+---+---+---+---+---+---+----------+-|------+
+@   | LOCATE | LINK    | 4 | D | A | T | A | 0 | 0 | 0 | (CREATE) | 0      |
+@   +--------+---------+---+---+---+---+---+---+---+---+-|--------+--------+
+@                                                       points to the (CREATE) interpreter.
+
+    .macro defvar name, label, initial=0
+    .data
+    .balign 4                           @ make sure we are on a 4 byte boundary
+    .word 0                             @ locate
+1:
+    .word link                          @ link
+    .byte 3f - 2f                       @ length byte
+2:
+    .ascii "\name"                      @ the name
+3:
+    .balign 4                           @ pad with 0's to 4 byte boundary
+    .global \label
+\label:                                 @ CFA for the word
+    .word _paren_create
+    .global var_\label
+var_\label:                             @ DFA for the variable
+    .word \initial                      @ initial value of the variable
+
+    .set link, 1b
+    .endm
+
+
+@
+@   Error Codes
+@
+
+    .EQU ERR_OK,                          0
+    .equ ERR_ABORT,                      -1 
+    .equ ERR_ABORT_QUOTE,                -2 
+    .equ ERR_STACK_OVERFLOW,             -3 
+    .equ ERR_STACK_UNDERFLOW,            -4 
+    .equ ERR_RETURN_STACK_OVERFLOW,      -5 
+    .equ ERR_RETURN_STACK_UNDERFLOW,     -6 
+    .equ ERR_DO_LOOPS_NESTED_TOO_DEEPLY, -7 
+    .equ ERR_DICTIONARY_OVERFLOW,        -8 
+    .equ ERR_INVALID_MEMORY_ADDRESS,     -9 
+    .equ ERR_DIVISION_BY_ZERO,          -10
+    .equ ERR_RESULT_OUT_OF_RANGE,       -11
+    .equ ERR_ARGUMENT_TYPE_MISMATCH,    -12
+    .equ ERR_UNDEFINED_WORD,            -13
+    .equ ERR_COMPILE_ONLY_WORD,         -14
+    .equ ERR_INVALID_FORGET,            -15
+    .equ ERR_ATTEMPT_TO_EMPTY_NAME,     -16
+    .equ ERR_PIC_NUM_OUTPUT_OVERFLOW,   -17
+    .equ ERR_PARSED_STRING_OVERFLOW,    -18
+    .equ ERR_DEFINITION_NAME_TOO_LONG,  -19
+    .equ ERR_WRITE_TO_ROM,              -20
+    .equ ERR_UNSUPPORTED_OPERATION,     -21
+    .equ ERR_CONTROL_STRUCT_MISMATCH,   -22
+    .equ ERR_ADDR_ALIGNMENT_EXCEPTION,  -23
+    .equ ERR_INVALID_NUMERIC_ARGUMENT,  -24
+    .equ ERR_RETURN_STACK_IMBALANCE,    -25
+    .equ ERR_LOOP_PARAMS_UNAVAILABLE,   -26
+    .equ ERR_INVALID_RECURSION,         -27
+    .equ ERR_USER_INTERRUPT,            -28
+    .equ ERR_COMPILER_NESTING,          -29
+    .equ ERR_OBSOLESCENT_FEATURE,       -30
+    .equ ERR_TO_BODY_USED_INCORRECTLY,  -31
+    .equ ERR_INVALID_NAME_ARGUMENT,     -32
+    .equ ERR_BLOCK_READ_EXCEPTION,      -33
+    .equ ERR_BLOCK_WRITE_EXCEPTION,     -34
+    .equ ERR_INVALID_BLOCK_NUMBER,      -35
+    .equ ERR_INVALID_FILE_POSITION,     -36
+    .equ ERR_FILE_IO_EXCEPTION,         -37
+    .equ ERR_NONEXISTENT_FILE,          -38
+    .equ ERR_UNEXPECTED_EOF,            -39
+    .equ ERR_FP_INVALID_BASE,           -40
+    .equ ERR_FP_LOSS_OF_PRECISION,      -41
+    .equ ERR_FP_DIVIDE_BY_ZERO,         -42
+    .equ ERR_FP_RESULT_OUT_OF_RANGE,    -43
+    .equ ERR_FP_STACK_OVERFLOW,         -44
+    .equ ERR_FP_STACK_UNDERFLOW,        -45
+    .equ ERR_FP_INVALID_ARGUMENT,       -46
+    .equ ERR_COMP_WORDLIST_DELETED,     -47
+    .equ ERR_INVALID_POSTPONE,          -48
+    .equ ERR_SEARCHORDER_OVERFLOW,      -49
+    .equ ERR_SEARCHORDER_UNDERFLOW,     -50
+    .equ ERR_COMP_WORDLIST_CHANGED,     -51
+    .equ ERR_CF_STACK_OVERFLOW,         -52
+    .equ ERR_EXCEPTION_STACK_OVERFLOW,  -53
+    .equ ERR_FP_UNDERFLOW,              -54
+    .equ ERR_FP_UNIDENTIFIED_FAULT,     -55
+    .equ ERR_QUIT,                      -56
+    .equ ERR_EXCEPTION_IN_SEND_RECEIVE, -57
+    .equ ERR_IF_ELSE_THEN_EXCEPTION,    -58

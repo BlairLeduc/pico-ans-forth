@@ -8,10 +8,7 @@
 
 #include "font.h"
 
-//
-// PicoCalc LCD display definitions
-//
-
+// Raspberry Pi Pico board GPIO pins
 #define LCD_SCL         (10)            // serial clock (SCL)
 #define LCD_SDI         (11)            // serial data in (SDI)
 #define LCD_SDO         (12)            // serial data out (SDO)
@@ -19,12 +16,17 @@
 #define LCD_DCX         (14)            // data/command (D/CX)
 #define LCD_RST         (15)            // reset (RESET)
 
+
+// LCD interface definitions
 #define LCD_BAUDRATE    (75000000)      // 75 MHz SPI clock speed
 
+
+// LCD command definitions
 #define LCD_CMD_NOP     (0x00)          // no operation
 #define LCD_CMD_SWRESET (0x01)          // software reset
 #define LCD_CMD_SLPIN   (0x10)          // sleep in
 #define LCD_CMD_SLPOUT  (0x11)          // sleep out
+#define LCD_CMD_INVOFF  (0x20)          // display inversion off
 #define LCD_CMD_INVON   (0x21)          // display inversion on
 #define LCD_CMD_DISPOFF (0x28)          // display off
 #define LCD_CMD_DISPON  (0x29)          // display on
@@ -43,40 +45,49 @@
 #define LCD_CMD_DIC     (0xB4)          // display inversion control
 #define LCD_CMD_DFC     (0xB6)          // display function control
 #define LCD_CMD_EMS     (0xB7)          // entry mode set
+#define LCD_CMD_MODESEL (0xB9)          // mode set
 #define LCD_CMD_PWR1    (0xC0)          // power control 1
 #define LCD_CMD_PWR2    (0xC1)          // power control 2
+#define LCD_CMD_PWR3    (0xC2)          // power control 3
 #define LCD_CMD_VCMPCTL (0xC5)          // VCOM control
 #define LCD_CMD_PGC     (0xE0)          // positive gamma control
 #define LCD_CMD_NGC     (0xE1)          // negative gamma control
-#define LCD_CMD_E9      (0xE9)          // adjust control 
-#define LCD_CMD_F7      (0xF7)          // adjust control 3
+#define LCD_CMD_DOCA    (0xE8)          // driver output control
+#define LCD_CMD_E9      (0xE9)          // Manufacturer command
+#define LCD_CMD_F0      (0xF0)          // Manufacturer command
+#define LCD_CMD_F7      (0xF7)          // Manufacturer command
 
-#define WIDTH           (320)
-#define HEIGHT          (320)
-#define MEM_HEIGHT      (480) 
 
-#define RGB(r,g,b)      ((uint16_t)(((r) >> 3) << 11 | ((g) >> 2) << 5 | (b >> 3)))
+// Processing ANSI escape sequences is a small state machine. These
+// are the states.
+#define STATE_NORMAL    (0)             // normal state
+#define STATE_ESCAPE    (1)             // escape character received
+#define STATE_CS        (2)             // control sequence introducer (CSI) received
+
+
+// Display parameters
+#define WIDTH           (320)           // pixels across the LCD
+#define HEIGHT          (320)           // pixels down the LCD
+#define FRAME_HEIGHT    (480)           // frame memory height in pixels
+#define COLUMNS         (WIDTH>>3)      // number of glyphs that fit in a line
+#define ROWS            (HEIGHT/GLYPH_HEIGHT) // number of lines that fit on the LCD
+#define MAX_COL         (COLUMNS - 1)   // maximum column index (0-based)
+#define MAX_ROW         (ROWS - 1)      // maximum row index (0-based)
+
+
+// Handy macros
+#define RGB(r,g,b)      ((uint16_t)(((r) >> 3) << 11 | ((g) >> 2) << 5 | ((b) >> 3)))
 #define UPPER8(x)       ((x) >> 8)      // upper byte of a 16-bit value
 #define LOWER8(x)       ((x) & 0xFF)    // lower byte of a 16-bit value
 
-//
-// PicoCalc display definitions
-//
 
-// Processing ANSI escape sequences is a small state machine
-#define STATE_NORMAL    0
-#define STATE_ESCAPE    1
-#define STATE_CONTROL   2
-
-#define DEFAULT_FOREGROUND          8   // white phosphor
-#define DEFAULT_BACKGROUND          0   // black
-#define CURSOR_COLOR                8   // white phosphor
-#define COLUMNS     (WIDTH>>3) // number of glyphs that fit in a line
-#define ROWS        (HEIGHT/GLYPH_HEIGHT) // number of lines that fit in a page
-#define MAX_COL     (COLUMNS - 1)       // maximum column index (0-based)
-#define MAX_ROW     (ROWS - 1)          // maximum row index (0-based)
+// Defaults
+#define FOREGROUND      RGB(216, 240, 255)  // white phosphor
+#define BACKGROUND      RGB(0, 0, 0)        // black 
+#define BRIGHT          RGB(255, 255, 255)  // white
 
 
+// Function prototypes
 void display_init();
 bool display_emit_available();
 void display_emit(char c);

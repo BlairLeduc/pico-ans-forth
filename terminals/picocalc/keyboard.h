@@ -6,12 +6,17 @@
 
 #pragma once
 
+// Raspberry Pi Pico board GPIO pins
 #define KBD_SDA             6
 #define KBD_SCL             7
 
-#define KBD_BAUDRATE       10000        // if dual i2c, then the speed of keyboard i2c should be 10khz
+
+// Keyboard interface definitions
+#define KBD_BAUDRATE       10000
 #define KBD_ADDR            0x1F
 
+
+// Keyboard register definitions
 #define KBD_REG_VER         0x01        // fw version
 #define KBD_REG_CFG         0x02        // config
 #define KBD_REG_INT         0x03        // interrupt status
@@ -24,6 +29,8 @@
 #define KBD_REG_BK2         0x0A        // keyboard backlight
 #define KBD_REG_BAT         0x0b        // battery
 
+
+// Keyboard key definitions
 #define KEY_MOD_ALT         0xA1
 #define KEY_MOD_SHL         0xA2
 #define KEY_MOD_SHR         0xA3
@@ -62,10 +69,16 @@
 #define KEY_F9              0x89
 #define KEY_F10             0x90
 
+
+// Keyboard type-ahead buffer
 #define KBD_BUFFER_SIZE     32
 
+
+// Keyboard Function prototypes
 void keyboard_init();
 bool keyboard_key_available();
 int keyboard_get_key();
 
-int read_battery();
+
+// Other "south bridge" function prototypes
+int southbridge_read_battery();

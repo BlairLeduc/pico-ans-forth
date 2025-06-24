@@ -6,7 +6,7 @@
 @   This file contains the Standard Forth Exception wordset.
 @
 
-    .include "forth.inc"
+    .include "forth.S"
 
     .text
 

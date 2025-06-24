@@ -6,7 +6,7 @@
 @   This file contains the Standard Forth Core workset (comments)
 @
 
-    .include "forth.inc"
+    .include "forth.S"
 
     .text
 

@@ -6,6 +6,6 @@
 @   This file contains the Standard Forth Double wordset.
 @
 
-    .include "forth.inc"
+    .include "forth.S"
 
 

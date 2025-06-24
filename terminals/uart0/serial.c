@@ -79,7 +79,7 @@ bool serial_key_available()
 
 int serial_get_key()
 {
-    while (!keyboard_key_available()) {
+    while (!serial_key_available()) {
         tight_loop_contents();          // Wait for a character
     }
         

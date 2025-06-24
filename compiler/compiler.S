@@ -6,7 +6,7 @@
 @   This file contains the Standard Forth Core workset (compiler)
 @
 
-    .include "forth.inc"
+    .include "forth.S"
 
 @
 @   Dictionary definition structure

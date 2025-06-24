@@ -6,7 +6,7 @@
 @   This file contains the Standard Forth Core workset (logical)
 @   See 2.2.2 Logical and Relational Operations (FPH, p44)
 
-    .include "forth.inc"
+    .include "forth.S"
 
     .text
 

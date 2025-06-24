@@ -7,6 +7,6 @@
 @   See 4.1 THE TEXT INTERPRETER (FPH, p119)
 @
 
-    .include "forth.inc"
+    .include "forth.S"
 
     .text

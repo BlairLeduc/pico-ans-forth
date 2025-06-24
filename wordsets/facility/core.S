@@ -6,7 +6,7 @@
 @   This file contains the Standard Forth Facility wordset.
 @
 
-    .include "forth.inc"
+    .include "forth.S"
 
     .text
 
@@ -60,6 +60,6 @@ vt100_clear:
     .global _battery
     .thumb_func
 _battery:
-    bl read_battery
+    bl southbridge_read_battery
     pushd r0
     NEXT

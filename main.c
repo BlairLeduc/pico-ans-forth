@@ -5,7 +5,11 @@
 //
 
 #include "pico/stdlib.h"
-#include "hardware.h"
+#include "hardware/clocks.h"
+#include "terminal.h"
+
+extern void forth_start(); // Implemented in assembly
+
 
 //
 // The entry point for the Forth interpreter

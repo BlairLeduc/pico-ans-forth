@@ -6,7 +6,7 @@
 @   This file contains the Standard Forth Core workset (onput-output)
 @   See 3.3 SERIAL I/O (FPH, p81)
 
-    .include "forth.inc"
+    .include "forth.S"
 
     .text
 

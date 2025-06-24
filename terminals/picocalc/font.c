@@ -8,8 +8,11 @@
 //  PicoCalc LCD display font (8x10)
 //
 //  This font is strongly based on the original font used in the VT100 terminal,
-//  with some tweaks from the VT200 terminal font, and modified to fit the
-//  lower resolution of the PicoCalc LCD display.
+//  including some changes made to the VT220 terminal font, and modified to look
+//  better on the lower resolution of the PicoCalc LCD display.
+//
+//  Neither of these terminals had a slashed-zero. The zero '0' is round and the
+//  capital letter 'O' is square.
 //
 
 #include "pico/stdlib.h"
@@ -429,13 +432,13 @@ const uint8_t font[] = {
     0b00000000,
     0b00000000,
     // 0x25
-    0b01000010,
-    0b10100100,
-    0b01001000,
+    0b11000010,
+    0b11000100,
+    0b00001000,
     0b00010000,
-    0b00100100,
-    0b01001010,
-    0b10000100,
+    0b00100000,
+    0b01000110,
+    0b10000110,
     0b00000000,
     0b00000000,
     0b00000000,
@@ -451,9 +454,9 @@ const uint8_t font[] = {
     0b00000000,
     0b00000000,
     // 0x27
-    0b00111000,
-    0b00110000,
-    0b01000000,
+    0b00011000,
+    0b00010000,
+    0b00100000,
     0b00000000,
     0b00000000,
     0b00000000,
@@ -1202,7 +1205,7 @@ const uint8_t font[] = {
     0b00001000,
     0b00001000,
     0b00001000,
-    0b00001000,
+    0b10001000,
     0b10001000,
     0b01110000,
     0b00000000,
@@ -1231,7 +1234,7 @@ const uint8_t font[] = {
     // 0x6D
     0b00000000,
     0b00000000,
-    0b11100100,
+    0b11000100,
     0b10101010,
     0b10010010,
     0b10010010,
@@ -1388,7 +1391,7 @@ const uint8_t font[] = {
     0b00001100,
     0b00010000,
     0b00010000,
-    0b00100000,
+    0b01100000,
     0b00010000,
     0b00010000,
     0b00001100,
@@ -1410,7 +1413,7 @@ const uint8_t font[] = {
     0b01100000,
     0b00010000,
     0b00010000,
-    0b00001000,
+    0b00001100,
     0b00010000,
     0b00010000,
     0b01100000,

@@ -6,7 +6,7 @@
 @   This file contains the Standard Forth Dictionary in Flash.
 @
 
-    .include "forth.inc"
+    .include "forth.S"
 
     @ Keep track of the the last created dictionary entry.
     .set link, 0

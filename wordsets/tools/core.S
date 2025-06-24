@@ -6,7 +6,19 @@
 @   This file contains the Standard Forth Tools workset.
 @
 
-    .include "forth.inc"
+    .include "forth.S"
+
+
+#if defined(PICO_ANS_FORTH_TERMINAL_UART)
+    @ Output formatting (80 characters per line, 16 bytes per row in dump)
+    .equ FMT_CPL, 80                    @ characters per line (Pico 2)
+    .equ FMT_BPR, 16                    @ bytes per row in dump
+#elif defined(PICO_ANS_FORTH_TERMINAL_PICOCALC)
+    @ Output formatting (40 characters per line, 4 bytes per row in dump)
+    .equ FMT_CPL, 40                    @ characters per line (PicoCalc)
+    .equ FMT_BPR, 4                     @ bytes per row in dump
+#endif
+
 
     .text   
 
@@ -69,7 +81,7 @@ __dump: @ r0 = count, r1 = address
     mov r7, r4                          @ save start address
 
 2:  @ Print CPL/4 hex bytes
-    mov r3, #BPR                        @ bytes per row
+    mov r3, #FMT_BPR                    @ bytes per row
 3:  ldrb r1, [r4], #1                   @ load byte and increment
     push {r3}                           @ save counter
     mov r0, #2                          @ field width 2
@@ -81,7 +93,7 @@ __dump: @ r0 = count, r1 = address
     bne 3b
 
     @ Print ASCII representation
-    mov r3, #BPR                       @ reset counter
+    mov r3, #FMT_BPR                   @ reset counter
 4:  ldrb r0, [r7], #1                  @ load byte from saved address
     cmp r0, #0x20                      @ check if printable
     blo 5f
@@ -97,7 +109,7 @@ __dump: @ r0 = count, r1 = address
 
     bl __cr                            @ end of line
     
-    subs r5, #BPR                      @ decrement count
+    subs r5, #FMT_BPR                  @ decrement count
     ble 7f                             @ exit if done
     b 1b                               @ next line
 
@@ -134,7 +146,7 @@ _words:
     and r1, #CB_LENGTH                  @ get word name length
     add r5, r1                          @ Add length to char count
     add r5, #1                          @ Add 1 for space
-    cmp r5, #CPL                        @ check if line is too long
+    cmp r5, #FMT_CPL                    @ check if line is too long
     blt 3f
     mov r6, r1
     bl __cr                             @ yes, print new line

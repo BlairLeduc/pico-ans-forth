@@ -8,7 +8,7 @@
 @       1.1.6 Numeric Input (FPH, p13)
 @
 
-    .include "forth.inc"
+    .include "forth.S"
 
     .text
 
