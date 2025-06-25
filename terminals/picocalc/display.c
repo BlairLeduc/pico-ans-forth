@@ -151,25 +151,12 @@ static void lcd_write16_buf(const uint16_t* buffer, size_t len)
 //  ST7365P LCD controller functions
 //
 
-// Turn on the LCD display
-static void lcd_display_on()
-{
-    lcd_aquire();
-    lcd_write_cmd(LCD_CMD_DISPON);
-    lcd_release();
-}
-
-// Turn off the LCD display
-static void lcd_display_off()
-{
-    lcd_aquire();
-    lcd_write_cmd(LCD_CMD_DISPOFF);
-    lcd_release();
-}
-
 // Select the target of the pixel data in the display RAM that will follow
 static void lcd_set_window(int x0, int y0, int x1, int y1)
 {
+    // lcd_acquire() and lcd_release() are not needed here, as this function
+    // is only called from lcd_blit() which already acquires the semaphore
+
     // Set column address (X)
     lcd_write_cmd(LCD_CMD_CASET);
     lcd_write_data(4,
@@ -317,6 +304,21 @@ static void lcd_erase_cursor()
     lcd_solid_rectangle(background, cursor_x << 3, ((cursor_y + 1) * GLYPH_HEIGHT) - 1, 8, 1);
 }
 
+// Turn on the LCD display
+static void lcd_display_on()
+{
+    lcd_aquire();
+    lcd_write_cmd(LCD_CMD_DISPON);
+    lcd_release();
+}
+
+// Turn off the LCD display
+static void lcd_display_off()
+{
+    lcd_aquire();
+    lcd_write_cmd(LCD_CMD_DISPOFF);
+    lcd_release();
+}
 
 
 //
@@ -355,11 +357,11 @@ void display_emit(char ch)
             state = STATE_NORMAL;           // reset state by default
             switch (ch)
             {
-                case 0x18:                  // CAN – cancel the current escape sequence
-                case 0x1A:                  // SUB – same as cancel
+                case CHR_CAN:               // cancel the current escape sequence
+                case CHR_SUB:               // same as cancel
                     lcd_putc(x++, y, 0x02); // print a error character
                     break;
-                case 0x1B:                  // ESC - Escape    
+                case CHR_ESC:
                     state = STATE_ESCAPE;   // stay in escape state
                     break;
                 case '7':                   // DECSC – Save Cursor
@@ -400,7 +402,7 @@ void display_emit(char ch)
             break;
 
         case STATE_CS:                      // in Control Sequence
-            if (ch == 0x1B)                 // ESC
+            if (ch == CHR_ESC)
             {
                 state = STATE_ESCAPE;
                 break;                      // reset to escape state
@@ -467,8 +469,8 @@ void display_emit(char ch)
                         x = MIN(parameters[0], MAX_COL);
                         y = MIN(parameters[1], MAX_ROW);
                         break;
-                    case 0x18:              // CAN – cancel the current escape sequence
-                    case 0x1A:              // SUB – same as cancel
+                    case CHR_CAN:           // cancel the current escape sequence
+                    case CHR_SUB:           // same as cancel
                         lcd_putc(x++, y, 0x02); // print a error character
                         break;
                     default:
@@ -482,24 +484,24 @@ void display_emit(char ch)
             // Normal/default state, process characters directly
             switch (ch)
             {
-                case 0x08:              // BS
+                case CHR_BS:
                     x = MAX(0, x - 1);  // move cursor back one space (but not before the start of the line)
                     break;
-                case 0x07:              // BEL
+                case CHR_BEL:
                     // No action for bell in this implementation
                     break;
-                case 0x09:              // HT
+                case CHR_HT:
                     x += MIN(((x + 4) & ~3), MAX_COL); // move cursor forward by 1 tabstop (but not beyond the end of the line)
                     break;
-                case 0x0A:              // LF
-                case 0x0B:              // VT
-                case 0x0C:              // FF
+                case CHR_LF:
+                case CHR_VT:
+                case CHR_FF:
                     y++;                // move cursor down one line
                     break;
-                case 0x0D:              // CR
+                case CHR_CR:
                     x = 0;              // move cursor to the start of the line
                     break;
-                case 0x1B:              // ESC
+                case CHR_ESC:
                     state = STATE_ESCAPE;
                     break;
                 default:

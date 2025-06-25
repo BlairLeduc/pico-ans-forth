@@ -66,6 +66,17 @@
 #define STATE_ESCAPE    (1)             // escape character received
 #define STATE_CS        (2)             // control sequence introducer (CSI) received
 
+// Control characters
+#define CHR_BEL        (0x07)          // Bell
+#define CHR_BS         (0x08)          // Backspace
+#define CHR_HT         (0x09)          // Horizontal Tab
+#define CHR_LF         (0x0A)          // Line Feed
+#define CHR_VT         (0x0B)          // Vertical Tab
+#define CHR_FF         (0x0C)          // Form Feed
+#define CHR_CR         (0x0D)          // Carriage Return
+#define CHR_CAN        (0x18)          // Cancel
+#define CHR_SUB        (0x1A)          // Substitute
+#define CHR_ESC        (0x1B)          // Escape
 
 // Display parameters
 #define WIDTH           (320)           // pixels across the LCD
