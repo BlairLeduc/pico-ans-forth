@@ -1,6 +1,6 @@
 # ANS Forth for the PicoCalc
 
-This hobby project is ANS Forth for Clockwork's [PicoCalc](https://www.clockworkpi.com/picocalc) using the [Pimoroni Pico Plus 2 W](https://shop.pimoroni.com/products/pimoroni-pico-plus-2-w).
+This hobby project is ANS Forth for Clockwork's [PicoCalc](https://www.clockworkpi.com/picocalc) using the [Raspberry Pi Pico 2](https://www.raspberrypi.com/products/raspberry-pi-pico-2/).
 
 > The goal of this project is my personal exploration, development, and enrichment. I wish to learn more about TILs and ANS Forth is the specification that I am targeting.
 
@@ -28,7 +28,7 @@ The references listed below will be more helpful and set the direction of implem
 
 ## Required Hardware
 
-A [Pimoroni Pico Plus 2 W](https://shop.pimoroni.com/products/pimoroni-pico-plus-2-w) and a [Raspbery Pi Debug Probe](https://www.raspberrypi.com/products/debug-probe/). Whilst there is an option to use UART0 on the Pico for a terminal, I have stopped development in this area and you will most likely require a [PicoCalc](https://www.clockworkpi.com/picocalc).
+A [Raspberry Pi Pico 2](https://www.raspberrypi.com/products/raspberry-pi-pico-2/) and a [Raspbery Pi Debug Probe](https://www.raspberrypi.com/products/debug-probe/). Whilst there is an option to use UART0 on the Pico for a terminal, I have stopped development in this area and you will most likely require a [PicoCalc](https://www.clockworkpi.com/picocalc).
 
 ## Development
 
@@ -45,8 +45,8 @@ I am now working literals and constants, followed by structural programming.
 ### PicoCalc
 I have reliable drivers for the LCD and Keyboard on the PicoCalc. The SD card and sound is not supported. 
 
-### Pico Plus 2 W
-Wifi, PSRAM, or block (flash) is not supported.
+### Pico 2 (W)
+Wifi and block (flash) is not supported.
 
 ## Roadmap
 

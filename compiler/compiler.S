@@ -419,3 +419,15 @@ _colon_noname:
     NEXT
 
 
+    @   6.1.0950    CONSTANT ( x “<spaces>name” -- )
+    @
+    @   Skip leading space delimiters. Parse name delimited by a space. Create a definition for name
+    @   with the execution semantics defined below.
+    @
+    @   name is referred to as a “constant”.
+
+@     .global _constant
+@     .thumb_func
+@ _constant:
+@     bl __create                         @ Create a new word
+    

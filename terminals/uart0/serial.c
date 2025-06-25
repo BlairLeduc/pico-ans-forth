@@ -79,8 +79,8 @@ bool serial_key_available()
 
 int serial_get_key()
 {
-    while (!serial_key_available()) {
-        tight_loop_contents();          // Wait for a character
+    if (!serial_key_available()) {
+        return -1;                     // No key available
     }
         
     uint8_t ch = rx_buffer[rx_tail];
@@ -95,9 +95,5 @@ bool serial_emit_available()
 
 void serial_emit(char ch)
 {
-    while (!serial_emit_available())
-    {
-        tight_loop_contents();          // Wait until we can write
-    }
     uart_putc(uart0, ch);             // Send the character
 }

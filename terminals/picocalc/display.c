@@ -11,8 +11,13 @@
 //  using the ST7789P LCD controller.
 //
 //  It is optimised for a character-based display with a fixed-width, 8-pixel wide font
-//  and 65K colours in the RGB565 format. This driver is requires little memory as it
+//  and 65K colours in the RGB565 format. This driver requires little memory as it
 //  uses the frame memory on the controller directly.
+//
+//  NOTE: Some code below is written to respect timing constraints of the ST7789P controller.
+//        For instance, you can usually get away with a short chip select high pulse widths, but
+//        writing to the display RAM requires the minimum chip select high pulse width of 40ns.
+//
 
 #include "pico/stdlib.h"
 #include "pico/multicore.h"
@@ -47,24 +52,6 @@ uint16_t char_buffer[8 * GLYPH_HEIGHT] __attribute__ ((aligned(4)));
 // Background processing
 semaphore_t lcd_sem;
 static repeating_timer_t cursor_timer;
-
-// Wait for ~40 ns (12 cycles at 252MHz, lots of margin at lower clock speeds)
-static inline void wait_40ns() {
-    __asm__ volatile (
-        "nop\n\t"
-        "nop\n\t"
-        "nop\n\t"
-        "nop\n\t"
-        "nop\n\t"
-        "nop\n\t"
-        "nop\n\t"
-        "nop\n\t"
-        "nop\n\t"
-        "nop\n\t"
-        "nop\n\t"
-        "nop\n\t"
-    );
-}
 
 // Reset the LCD display
 static void lcd_reset()
@@ -123,29 +110,40 @@ static void lcd_write_data(uint8_t len, ...)
 static void lcd_write16_data(uint8_t len, ...)
 {
     va_list args;
+
+    // DO NOT MOVE THE spi_set_format() OR THE gpio_put(LCD_DCX) CALLS!
+    // They are placed before the gpio_put(LCD_CSX) to ensure that a minimum
+    // chip select high pulse width is achieved (at least 40ns)
+    spi_set_format(spi1, 16, 0, 0, SPI_MSB_FIRST);
+
     va_start(args, len);
     gpio_put(LCD_DCX, 1);               // Data
     gpio_put(LCD_CSX, 0);
-    spi_set_format(spi1, 16, 0, 0, SPI_MSB_FIRST);
     for (uint8_t i = 0; i < len; i++)
     {
         uint16_t data = va_arg(args, int); // get the next half-word of data
         spi_write16_blocking(spi1, &data, 1);
     }
-    spi_set_format(spi1, 8, 0, 0, SPI_MSB_FIRST);
     gpio_put(LCD_CSX, 1);
     va_end(args);
+
+    spi_set_format(spi1, 8, 0, 0, SPI_MSB_FIRST);
 }
 
 // Send a buffer of 16-bit data (half-words)
 static void lcd_write16_buf(const uint16_t* buffer, size_t len)
 {
+    // DO NOT MOVE THE spi_set_format() OR THE gpio_put(LCD_DCX) CALLS!
+    // They are placed before the gpio_put(LCD_CSX) to ensure that a minimum
+    // chip select high pulse width is achieved (at least 40ns)
+    spi_set_format(spi1, 16, 0, 0, SPI_MSB_FIRST);
+
     gpio_put(LCD_DCX, 1);               // Data
     gpio_put(LCD_CSX, 0);
-    spi_set_format(spi1, 16, 0, 0, SPI_MSB_FIRST);
     spi_write16_blocking(spi1, buffer, len);
-    spi_set_format(spi1, 8, 0, 0, SPI_MSB_FIRST);
     gpio_put(LCD_CSX, 1);
+
+    spi_set_format(spi1, 8, 0, 0, SPI_MSB_FIRST);
 }
 
 
@@ -208,7 +206,6 @@ static void lcd_blit(uint16_t* pixels, int x, int y, int width, int height)
 
     lcd_aquire();
     lcd_set_window(x, y_virtual, x + width - 1, y_virtual + height - 1);
-    wait_40ns();                        // Need a minimum chip select “H” pulse width
     lcd_write16_buf((uint16_t*)pixels, width * height);
     lcd_release();
 }
@@ -355,12 +352,12 @@ void display_emit(char ch)
     switch (state)
     {
         case STATE_ESCAPE:                  // ESC character received, process the next character
+            state = STATE_NORMAL;           // reset state by default
             switch (ch)
             {
                 case 0x18:                  // CAN – cancel the current escape sequence
                 case 0x1A:                  // SUB – same as cancel
                     lcd_putc(x++, y, 0x02); // print a error character
-                    state = STATE_NORMAL;   // reset state
                     break;
                 case 0x1B:                  // ESC - Escape    
                     state = STATE_ESCAPE;   // stay in escape state
@@ -368,25 +365,20 @@ void display_emit(char ch)
                 case '7':                   // DECSC – Save Cursor
                     save_x = x;
                     save_y = y;
-                    state = STATE_NORMAL;
                     break;
                 case '8':                   // DECRC – Restore Cursor
                     x = save_x;
                     y = save_y;
-                    state = STATE_NORMAL;
                     break;
                 case 'D':                   // IND – Index
                     y++;
-                    state = STATE_NORMAL;
                     break;
                 case 'E':                   // NEL – Next Line
                     x = 0;
                     y++;
-                    state = STATE_NORMAL;
                     break;
                 case 'M':                   // RI – Reverse Index
                     y--;
-                    state = STATE_NORMAL;
                     break;
                 case 'c':                   // RIS – Reset To Initial State
                     x = y = 0;
@@ -395,7 +387,6 @@ void display_emit(char ch)
                     underscore = false;
                     reverse = false;
                     lcd_clear_screen();
-                    state = STATE_NORMAL;
                     break;
                 case '[':                   // CSI - Control Sequence Introducer
                     p_index = 0;
@@ -403,7 +394,7 @@ void display_emit(char ch)
                     state = STATE_CS;
                     break;
                 default:
-                    state = STATE_NORMAL;   // not a valid escape sequence, reset state
+                    // not a valid escape sequence, should we print an error?
                     break;
             }
             break;
@@ -428,6 +419,7 @@ void display_emit(char ch)
             }
             else                            // final character in control sequence
             {
+                state = STATE_NORMAL;       // reset state after processing the control sequence
                 switch (ch)
                 {
                     case 'A':               // CUU – Cursor Up
@@ -478,12 +470,10 @@ void display_emit(char ch)
                     case 0x18:              // CAN – cancel the current escape sequence
                     case 0x1A:              // SUB – same as cancel
                         lcd_putc(x++, y, 0x02); // print a error character
-                        state = STATE_NORMAL;   // reset state
                         break;
                     default:
                         break;              // ignore unknown sequences
                 }
-                state = STATE_NORMAL;       // reset state after processing the control sequence
             }
             break;
 
@@ -565,7 +555,7 @@ bool on_cursor_timer(repeating_timer_t *rt)
 {
     static bool cursor_visible = false;
 
-    if (sem_available(&lcd_sem) == 0)
+    if (!sem_available(&lcd_sem))
     {
         return true;                    // if the SPI bus is not available, do not toggle cursor
     }

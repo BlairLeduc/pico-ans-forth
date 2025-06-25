@@ -18,6 +18,8 @@
 
 
 // LCD interface definitions
+// According to the ST7789P datasheet, the maximum SPI clock speed is 62.5 MHz.
+// However, the controller can handle 75 MHz in practice.
 #define LCD_BAUDRATE    (75000000)      // 75 MHz SPI clock speed
 
 

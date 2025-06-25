@@ -72,7 +72,7 @@ static bool on_keyboard_timer(repeating_timer_t *rt)
 {
     uint8_t buffer[2];
 
-    if (sem_available(&sb_sem) == 0)
+    if (!sem_available(&sb_sem))
     {
         return true;                    // if SPI is not available, skip this timer tick
     }
@@ -167,8 +167,8 @@ bool keyboard_key_available()
 
 int keyboard_get_key()
 {
-    while (!keyboard_key_available()) {
-        tight_loop_contents();          // wait for a character
+    if (!keyboard_key_available()) {
+        return -1; // No key available
     }
         
     uint8_t ch = rx_buffer[rx_tail];

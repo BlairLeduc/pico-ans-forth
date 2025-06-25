@@ -130,7 +130,7 @@
 
 
 @
-@   2.1.3 Memory Stack Operations (FPH, p35)
+@   2.3.4 Memory Stack Operations (FPH, p69)
 @
 
     @   6.1.0010    ! ( x a-addr —- ) [core]
@@ -159,7 +159,7 @@
 
 
 @
-@   2.1.4 Return Stack Manipulation Operations (FPH, p36)
+@   2.1.3 Return Stack Manipulation Operations (FPH, p36)
 @
 
     @   6.2.0340    2>R ( x1 x2 —- ) ( R: —- x1 x2 ) [core ext]
@@ -182,7 +182,7 @@
 
 
 @
-@   2.1.5 Programmer Conveniences (FPH, p37)
+@   2.1.4 Programmer Conveniences (FPH, p37)
 @
 
     @   15.6.1.0220 .S ( —- ) [tools]
@@ -215,10 +215,14 @@
     defcode "*",,MUL,_mul
 
     @   6.1.0100    */ ( n1 n2 n3 —- n4 ) [core]
-    @   TODO
+    defword "*/",,MUL_DIV
+    .word NROT, MUL, SWAP, DIVIDE
+    .word EXIT
 
     @   6.1.0110    */MOD ( n1 n2 n3 —- n4 n5 ) [core]
-    @   TODO
+    defword "*/MOD",,MUL_DIVMOD
+    .word NROT, MUL, SWAP, DIVMOD
+    .word EXIT
 
     @   6.1.0120    + ( n1 n2 —- n3 ) [core]
     defcode "+",,ADD,_add
@@ -301,10 +305,10 @@
     @
 
     @   8.6.1.1040  D+ ( d1 d2 -— d3 ) [double]
-    @   TODO
+    defcode "D+",,DADD,_dadd
 
     @   8.6.1.1050  D- ( d1 d2 -— d3 ) [double]
-    @   TODO
+    defcode "D-",,DSUB,_dsub
 
     @   8.6.1.1090  D2* ( xd1 -— xd2 ) [double]
     @   TODO
@@ -477,6 +481,13 @@
     @   6.2.2000    PAD ( -— addr ) [core ext]
     defcode "PAD",,PAD,_pad
 
+
+@
+@   2.3.2.2 Constants and Values
+@
+
+    @   6.1.0950    CONSTANT ( x “<spaces>name” -- ) [core]
+    @defcode "CONSTANT",,CONSTANT,_constant
 @
 @   2.3.3 String Management Operations
 @
