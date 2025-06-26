@@ -107,6 +107,38 @@ __move:
 2:  bx lr
 
 
+    @   6.2.2295    TO ( x -- )
+    @
+    @   Interpretation: ( x “<spaces>name” -- )
+    @       Skip leading spaces and parse name delimited by a space. Store x in name. An ambiguous
+    @       condition exists if name was not defined by VALUE.
+    @   Compilation: ( “<spaces>name” -- )
+    @       Skip leading spaces and parse name delimited by a space. Append the run-time semantics
+    @       given below to the current definition. An ambiguous condition exists if name was not defined
+    @       by VALUE.
+    @   Run-time: ( x -- )
+    @       Store x in name.
+
+    .global _to
+    .thumb_func
+_to:
+    push {r4-r5}
+    mov r0, #0x20                       @ space delimiter
+    bl __word                           @ get next word
+    mov r4, r0                          @ save word address
+    mov r5, r1                          @ save word length
+    bl __find                           @ find in dictionary
+    cmp r1, #0
+    popd r1
+    str r1, [r0, #4]
+    pop {r4-r5}
+    NEXT
+    
+    beq __word_not_found                @ if not found, branch to error handling
+    pop {r4-r5}
+    NEXT
+
+
     @   Check Stacks
     @
     @   This word checks the integrity of the stacks and data space. It verifies that the stacks have not

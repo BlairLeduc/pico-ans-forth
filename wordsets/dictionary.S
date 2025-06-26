@@ -487,7 +487,25 @@
 @
 
     @   6.1.0950    CONSTANT ( x “<spaces>name” -- ) [core]
-    @defcode "CONSTANT",,CONSTANT,_constant
+    defword "CONSTANT",,CONSTANT
+    .word CREATE, COMMA, DOES
+    .word 0x47184B00                    @ ldr/bx   
+    .word _paren_does, FETCH
+    .word EXIT
+
+    @   6.1.0960    VALUE ( x “<spaces>name” -- ) [core]
+    defword "VALUE",,VALUE
+    .word CREATE, COMMA, DOES
+    .word 0x47184B00                    @ ldr/bx
+    .word _paren_does, FETCH
+    .word EXIT
+
+    @   6.1.0970    VARIABLE ( —- ) [core]
+    defword "VARIABLE",,VARIABLE
+    .word CREATE, COMMA
+    .word EXIT
+
+
 @
 @   2.3.3 String Management Operations
 @
@@ -507,8 +525,8 @@
     @   6.1.1540    FILL ( c-addr u b —- ) [core]
     defcode "FILL",,FILL,_fill
 
-    @   6.1.1900    MOVE ( addr1 addr2 u -— ) [core]
-    defcode "MOVE",,MOVE,_move
+    @   6.2.2295    TO ( x -- ) [core ext]
+    defcode "TO",,TO,_to
 
     @   17.6.1.0910 CMOVE ( c-addr1 c-addr2 u -— ) [string]
     @   TODO
@@ -989,6 +1007,11 @@
     .word LITERAL, 3, INVERT
     .word AND
     .word EXIT
+
+    @               BUFFER: ( n -- ) [common usage]
+    defword "BUFFER:",,BUFFER_COLON
+    .word CREATE, ALLOT
+    .WORD EXIT
 
     @   6.1.0860    C, ( char —- ) [core]
     defcode "C,",,C_COMMA,_c_comma

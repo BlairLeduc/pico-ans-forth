@@ -372,7 +372,8 @@ __bracket_undefined:
     movne r0, #0                        @ if found, return false
     pop {pc}
 
-
+    .global __word_not_found
+    .thumb_func
 __word_not_found:
     pop {r4-r5, lr}
     mov r0, r4                          @ restore word address
@@ -614,6 +615,8 @@ _find:
     @       r0 - execution token xt of the word in the dictionary (or address of the search string if not found)
     @       r1 - 0 if not found, 1 if immediate, -1 if not immediate
 
+    .global __find
+    .thumb_func
 __find:
     push {r4-r7}
 

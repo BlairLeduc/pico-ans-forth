@@ -180,12 +180,12 @@ __type_welcome:
     pop {pc}
 
 .Lmsg_welcome:
-    .ascii "\033cANS Forth for the "
+    .ascii "\ANS Forth for the "
     .ascii PICO_ANS_FORTH_TERMINAL
     .ascii "\n\rCopyright Blair Leduc.\n\r"
     .ascii "Version "
     .ascii PICO_ANS_FORTH_VERSION
-    .asciz "\n\r"
+    .asciz "\n\r\n\r"
     .balign 4
 
 
