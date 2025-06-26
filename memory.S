@@ -256,3 +256,9 @@ terminal_input_buffer:
     .global s_quoted_string_buffer
 s_quoted_string_buffer:
     .space S_QUOTED_STRING_BUFFER_SIZE  @ reserve bytes for the s-quoted string buffer
+
+    @ Forth s-quoted string buffer
+    .balign 4
+    .global c_quoted_string_buffer
+c_quoted_string_buffer:
+    .space C_QUOTED_STRING_BUFFER_SIZE  @ reserve bytes for the s-quoted string buffer

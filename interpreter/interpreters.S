@@ -160,6 +160,7 @@ _two_literal:
     pushd r0                            @ push the second part on to the stack
     NEXT
 
+
     .global _s_literal
     .thumb_func
 _s_literal:
@@ -191,6 +192,39 @@ _s_literal:
 1:  ldr r0, [r5], #4                    @ r0 = length of the string
     pushd r5
     pushd r0                            @ push the address of the string and its length
+    add r5, r0
+    add r5, #3                          @ increment r5 to point to the next command
+    and r5, #~3
+    NEXT
+
+
+    .global _c_literal
+    .thumb_func
+_c_literal:
+    ldr r0, =var_STATE
+    ldr r0, [r0]                        @ load the current state (compiling or interpreting)
+    cmp r0, #0                          @ is STATE 0? (interpreting)
+    beq 1f                              @ if so, branch to push the literal number on the stack
+
+    @ Compiling a literal string - append the word to the current dictionary definition.
+    ldr r0, =C_LITERAL                  @ load the address of the SLITERAL word
+    bl __comma                          @ append the xt to the data fields
+    popd r0                             @ source address
+    ldrb r1, [r0]                       @ get the length of the string
+    ldr r2, =var_DP
+    ldr r2, [r2]                        @ get the current DP value
+    push {r1-r2}
+    bl __move                           @ move the string from the parse area to the data fields
+    pop {r1-r2}                         @ restore the string length
+    add r2, r1
+    add r2, #3
+    and r2, #~3                         @ align the length to 4 bytes
+    ldr r3, =var_DP
+    str r2, [r3]                        @ update DP
+    NEXT
+
+1:  pushd r5                            @ push the address of the counted string
+    ldrb r0, [r5]
     add r5, r0
     add r5, #3                          @ increment r5 to point to the next command
     and r5, #~3

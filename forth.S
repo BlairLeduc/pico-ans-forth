@@ -15,9 +15,9 @@
     .set FLOAT_STACK_SIZE, 512          @ 128 cells for the float stack
     .set PAD_SIZE, 128                  @ 128 bytes for the scratch PAD
     .set DATA_SPACE_SIZE, 393216        @ 384K (TODO: how do we get an accurate value?) for data space
-    .set TERMINAL_INPUT_BUFFER_SIZE, 80 @ 80 bytes is standard for the terminal input buffer
+    .set TERMINAL_INPUT_BUFFER_SIZE, 39 @ 40 bytes is standard for the terminal input buffer
     .set S_QUOTED_STRING_BUFFER_SIZE, 80 @ 80 bytes for the S" quoted string buffer
-
+    .set C_QUOTED_STRING_BUFFER_SIZE, 80 @ 80 bytes for the C" quoted string buffer
 
 @
 @   The NEXT macro is used to execute the next instruction stored in the word's data fields.

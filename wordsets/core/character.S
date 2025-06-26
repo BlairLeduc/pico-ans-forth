@@ -74,6 +74,42 @@ _s_quote:
     NEXT
 
 
+
+    .global _c_quote
+    .thumb_func
+_c_quote:
+    mov r0, #0x22                       @ ASCII '"'
+    eor r1, r1                          @ skip leading spaces
+    bl __parse
+    ldr r3, =var_STATE
+    ldr r3, [r3]                        @ get the current state
+    cmp r3, #0
+    beq 1f                              @ if in interpretation state, just return the string  
+
+    @ compilation
+    ldr r2, =var_DP
+    ldr r2, [r2]                        @ get the current DP value
+    ldr r3, =C_LITERAL
+    str r3, [r2], #4                    @ store CLITERAL
+    strb r1, [r2], #1                   @ store the string length as a byte
+    push {r1-r2}                        @ save the string length
+    bl __move                           @ move the string from the parse area
+    pop {r1-r2}                         @ restore the string length
+    add r2, r1
+    add r2, #3
+    and r2, #~3                         @ align the length to 4 bytes
+    ldr r3, =var_DP
+    str r2, [r3]                        @ update DP
+    NEXT
+
+    @ run-time
+1:  movw r2, :lower16:c_quoted_string_buffer
+    movt r2, :upper16:c_quoted_string_buffer
+    pushd r2
+    strb r1, [r2], #1                   @ store the string length as a byte
+    bl __move
+    NEXT
+
     @   6.1.0190    ."                                  “dot-quote”
     @   
     @   Compilation: ( “ccc<quote>” -- )

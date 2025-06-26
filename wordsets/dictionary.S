@@ -965,7 +965,7 @@
     defcode "S\"",CB_PRECEDENCE,S_QUOTE,_s_quote @"
 
     @   6.2.0855    C" <string>" ( -— c-addr ) [core ext]
-    @   TODO
+    defcode "C\"",CB_PRECEDENCE,C_QUOTE,_c_quote @"
 
     @   6.1.0190    ." <string>" ( -— ) [core]
     defcode ".\"",CB_PRECEDENCE,DOT_QUOTE,_dot_quote @"
@@ -1054,7 +1054,9 @@
     @   17.6.1.2212 SLITERAL ( -— c-addr u ) [string]
     defcode "SLITERAL",CB_PRECEDENCE,S_LITERAL,_s_literal
 
-@
+    @               CLITERAL [common usage]
+    defcode "CLITERAL",CB_PRECEDENCE,C_LITERAL,_c_literal
+ 
 @   4.6.2 Managing Word Lists
 @
 
