@@ -110,6 +110,27 @@ _c_quote:
     bl __move
     NEXT
 
+
+    .global _comma_quote
+    .thumb_func
+_comma_quote:
+    mov r0, #0x22                       @ ASCII '"'
+    eor r1, r1                          @ skip leading spaces
+    bl __parse
+    ldr r2, =var_DP
+    ldr r2, [r2]                        @ get the current DP value
+    strb r1, [r2], #1                   @ store the string length as a byte
+    push {r1-r2}                        @ save the string length
+    bl __move                           @ move the string from the parse area
+    pop {r1-r2}                         @ restore the string length
+    add r2, r1
+    add r2, #3
+    and r2, #~3                         @ align the length to 4 bytes
+    ldr r3, =var_DP
+    str r2, [r3]                        @ update DP
+    NEXT
+
+
     @   6.1.0190    ."                                  “dot-quote”
     @   
     @   Compilation: ( “ccc<quote>” -- )

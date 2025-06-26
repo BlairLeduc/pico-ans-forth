@@ -970,6 +970,9 @@
     @   6.1.0190    ." <string>" ( -— ) [core]
     defcode ".\"",CB_PRECEDENCE,DOT_QUOTE,_dot_quote @"
 
+    @               ," <string>" ( -— ) [common usage]
+    defcode ",\"",CB_PRECEDENCE,COMMA_QUOTE,_comma_quote @"
+
 
 @
 @   4.2.1 Creating a Dictionary Entry
