@@ -20,12 +20,12 @@
 
     @   6.1.1170    DECIMAL ( —- ) [core]
     defword "DECIMAL",,DECIMAL
-    .word LIT, 10, BASE, STORE
+    .word LITERAL, 10, BASE, STORE
     .word EXIT
 
     @   6.2.1660    HEX ( —- ) [core]
     defword "HEX",,HEX
-    .word LIT, 16, BASE, STORE
+    .word LITERAL, 16, BASE, STORE
     .word EXIT
 
 
@@ -39,7 +39,7 @@
     @   The number of characters in ccc may be zero to the number of characters in the parse area.
 
     defword "(",CB_PRECEDENCE,COMMENT
-    .word LIT, ')'
+    .word LITERAL, ')'
     .word PARSE
     .word TWODROP
     .word EXIT
@@ -582,7 +582,7 @@
     @   6.1.2520    [CHAR] ( —- char ) [core]
     defword "[CHAR]",CB_PRECEDENCE,CHAR_LITERAL
     .word CHAR
-    .word BRACKET_TICK, LIT, COMMA
+    .word BRACKET_TICK, LITERAL, COMMA
     .word COMMA
     .word EXIT
 
@@ -624,7 +624,7 @@
     .word BRACKET_TICK, ZBRANCH, COMMA  @ compile 0branch
     .word HERE                          @ save location of the offset2 on the stack
     .word SWAP                          @ get the original offset (from begin)
-    .word LIT, 0, COMMA                 @ compile a dummy offset2
+    .word LITERAL, 0, COMMA                 @ compile a dummy offset2
     .word EXIT
 
 @
@@ -663,7 +663,7 @@
     defword "ELSE",CB_PRECEDENCE,ELSE
     .word BRACKET_TICK, BRANCH, COMMA   @ definite branch to just over the false-part
     .word HERE                          @ save location of the offset on the stack
-    .word LIT, 0, COMMA                 @ compile a dummy offset
+    .word LITERAL, 0, COMMA                 @ compile a dummy offset
     .word SWAP                          @ now back-fill the original (if) offset
     .word DUP                           @ same as for then word above
     .word HERE, SWAP, SUB
@@ -674,7 +674,7 @@
     defword "IF",CB_PRECEDENCE,IF
     .word BRACKET_TICK, ZBRANCH, COMMA  @ compile 0branch
     .word HERE                          @ save location of the offset on the stack
-    .word LIT, 0, COMMA                 @ compile a dummy offset
+    .word LITERAL, 0, COMMA                 @ compile a dummy offset
     .word EXIT
 
     @   6.1.2270    THEN ( —- ) [core]
@@ -690,7 +690,7 @@
 
     @   6.2.0873    CASE ( —- ) [core]
     defword "CASE",CB_PRECEDENCE,CASE
-    .word LIT, 0
+    .word LITERAL, 0
     .word EXIT
 
     @   6.2.1342    ENDCASE ( —- ) [core]
@@ -740,16 +740,16 @@
 
     @   9.6.2.0670  ABORT ( -- ) [core]
     defword "ABORT",,abort
-    .word LIT, -1
+    .word LITERAL, -1
     .word THROW
     .word EXIT
 
     @   9.6.2.0680  ABORT" ( i*x flag -— ); ( R: j*x -— ) [core]
     defword "ABORT\"",,abort_quote  @"
-    .word LIT, '"'
+    .word LITERAL, '"'
     .word PARSE
     .word ROT, ZBRANCH, 16
-    .word LIT, -2
+    .word LITERAL, -2
     .word THROW
     .word THEN
     .word EXIT
@@ -985,8 +985,8 @@
 
     @   6.1.0706    ALIGNED ( addr —- a-addr ) [core]
     defword "ALIGNED",,ALIGNED
-    .word LIT, 3, ADD
-    .word LIT, 3, INVERT
+    .word LITERAL, 3, ADD
+    .word LITERAL, 3, INVERT
     .word AND
     .word EXIT
 
@@ -1020,13 +1020,10 @@
 @
 
     @   6.1.1780    LITERAL ( -— x ) [core]
-    defword "LITERAL",CB_PRECEDENCE,LITERAL
-    .word BRACKET_TICK, LIT, COMMA      @ compile lit
-    .word COMMA                         @ compile the literal itself (from the stack)
-    .word EXIT
+    defcode "LITERAL",CB_PRECEDENCE,LITERAL,_literal
 
     @   8.6.1.0390  2LITERAL ( -— x1 x2 ) [double]
-    @   TODO
+    defcode "2LITERAL",CB_PRECEDENCE,TWO_LITERAL,_two_literal
 
 
 @
@@ -1034,7 +1031,7 @@
 @
 
     @   17.6.1.2212 SLITERAL ( -— c-addr u ) [string]
-    defcode "SLITERAL",CB_PRECEDENCE,SLITERAL,_noop @_sliteral
+    defcode "SLITERAL",CB_PRECEDENCE,S_LITERAL,_s_literal
 
 @
 @   4.6.2 Managing Word Lists
@@ -1052,16 +1049,19 @@
     defcode "DOES>",CB_PRECEDENCE,DOES,_does
 
 @
+@   6.3.1 The Forth Compiler
+@
+
+    @   6.2.0945    COMPILE, ( xt -- ) [core ext]
+    defcode "COMPILE,",CB_PRECEDENCE,COMPILE_COMMA,_comma
+
+@
 @   Internal
 @
 
     defcode "BRANCH",,BRANCH, _branch
 
     defcode "0BRANCH",,ZBRANCH, _zbranch
-
-    defcode "(LITERAL)",,LIT, _lit
-
-    defcode "(SLITERAL)",,S_LIT, _s_lit
 
     defcode "BATTERY",,BATTERY,_battery
 

@@ -18,18 +18,6 @@
     .set TERMINAL_INPUT_BUFFER_SIZE, 80 @ 80 bytes is standard for the terminal input buffer
     .set S_QUOTED_STRING_BUFFER_SIZE, 80 @ 80 bytes for the S" quoted string buffer
 
-@ #if defined(PICO_ANS_FORTH_TERMINAL_UART)
-@ .warning "Using UART terminal formatting"
-@     @ Output formatting (80 characters per line, 16 bytes per row in dump)
-@     .equ FMT_CPL, 80                    @ characters per line (Pico 2)
-@     .equ FMT_BPR, 16                    @ bytes per row in dump
-@ #elif defined(PICO_ANS_FORTH_TERMINAL_PICOCALC)
-@ .warning "Using PicoCalc terminal formatting"
-@     @ Output formatting (40 characters per line, 4 bytes per row in dump)
-@     .equ FMT_CPL, 40                    @ characters per line (PicoCalc)
-@     .equ FMT_BPR, 4                     @ bytes per row in dump
-@ #endif
-
 
 @
 @   The NEXT macro is used to execute the next instruction stored in the word's data fields.

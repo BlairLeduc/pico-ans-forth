@@ -52,7 +52,7 @@ _s_quote:
     @ compilation
     ldr r2, =var_DP
     ldr r2, [r2]                        @ get the current DP value
-    ldr r3, =S_LIT
+    ldr r3, =S_LITERAL
     str r3, [r2], #4                    @ store SLITERAL
     str r1, [r2], #4                    @ store the string length
     push {r1-r2}                        @ save the string length
@@ -96,7 +96,7 @@ _dot_quote:
     @ compilation
     ldr r2, =var_DP
     ldr r2, [r2]                        @ get the current DP value
-    ldr r3, =S_LIT
+    ldr r3, =S_LITERAL
     str r3, [r2], #4                    @ store SLITERAL
     str r1, [r2], #4                    @ store the string length
     push {r1-r2}                        @ save the string length

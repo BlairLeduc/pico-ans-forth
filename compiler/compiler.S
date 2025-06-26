@@ -37,7 +37,7 @@
 @   top of stack is zero).
 @
 @   The diagram below shows how BRANCH works in some imaginary compiled word.  When BRANCH executes,
-@   r5 starts by pointing to the offset field (compare to LIT above):
+@   r5 starts by pointing to the offset field (compare to LITERAL above):
 @
 @   +---------------------+-------+---- - - ---+------------+------------+---- - - - ----+------------+
 @   | (Dictionary header) | DOCOL |            | BRANCH     | offset     | (skipped)     | word       |
@@ -160,8 +160,8 @@ _bracket_tick:
     movt r1, :upper16:var_DP
     ldr r2, [r1]
     @ Run-time
-    ldr r3, =LIT
-    str r3, [r2], #4                    @ store LIT
+    ldr r3, =LITERAL
+    str r3, [r2], #4                    @ store LITERAL
     str r0, [r2], #4                    @ store the execution token xt
     str r2, [r1]                        @ update DP
     NEXT

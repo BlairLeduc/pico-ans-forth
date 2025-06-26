@@ -110,20 +110,85 @@ _paren_constant:
     pushd r1                            @ push the constant value on to the data stack
     NEXT
 
-    .global _lit
+
+    .global _literal
     .thumb_func
-_lit:
-    @ LIT pushes a literal number onto the stack.
+_literal:
+    @ LITERAL pushes a literal number onto the stack.
     @ r5 points to the next command, but in this case it points to the next
     @ literal 32 bit integer.  Get that literal into r0 and increment r5.
-    ldr r0, [r5], #4
+    ldr r0, =var_STATE
+    ldr r0, [r0]                        @ load the current state (compiling or interpreting)
+    cmp r0, #0                          @ is STATE 0? (interpreting)
+    beq 1f                              @ if so, branch to push the literal number on the stack
+
+    @ Compiling a literal number - append the word to the current dictionary definition.
+    ldr r0, =LITERAL                    @ load the address of the LITERAL word
+    bl __comma                          @ append the code field address to the dictionary
+    popd r0
+    bl __comma                          @ append the literal number to the dictionary
+    NEXT
+
+1:  ldr r0, [r5], #4
     pushd r0                            @ push the literal number on to the stack
     NEXT
 
-    .global _s_lit
+
+    .global _two_literal
     .thumb_func
-_s_lit:
-    ldr r0, [r5], #4                    @ r0 = length of the string
+_two_literal:
+    @ TWO_LITERAL pushes a literal 64 bit integer onto the stack.
+    @ r5 points to the next command, but in this case it points to the next
+    @ literal 64 bit integer. Get that literal into r0 and increment r5.
+    ldr r0, =var_STATE
+    ldr r0, [r0]                        @ load the current state (compiling or interpreting)
+    cmp r0, #0                          @ is STATE 0? (interpreting)
+    beq 1f                              @ if so, branch to push the literal number on the stack
+
+    @ Compiling a literal number - append the word to the current dictionary definition.
+    ldr r0, =TWO_LITERAL                   @ load the address of the 2LITERAL word
+    bl __comma                          @ append the code field address to the dictionary
+    popd r0
+    bl __comma                          @ append the literal number to the dictionary
+    popd r0
+    bl __comma                          @ append the literal number to the dictionary
+    NEXT
+
+1:  ldr r0, [r5, #4]
+    pushd r0                            @ push the literal number on to the stack
+    ldr r0, [r5], #8                    @ get the second part of the 64 bit integer
+    pushd r0                            @ push the second part on to the stack
+    NEXT
+
+    .global _s_literal
+    .thumb_func
+_s_literal:
+    ldr r0, =var_STATE
+    ldr r0, [r0]                        @ load the current state (compiling or interpreting)
+    cmp r0, #0                          @ is STATE 0? (interpreting)
+    beq 1f                              @ if so, branch to push the literal number on the stack
+
+    @ Compiling a literal string - append the word to the current dictionary definition.
+    ldr r0, =S_LITERAL                  @ load the address of the SLITERAL word
+    bl __comma                          @ append the xt to the data fields
+    popd r0
+    push {r0}
+    bl __comma                          @ append the string length to the data fields 
+    pop {r1}                            @ length
+    popd r0                             @ source address
+    ldr r2, =var_DP
+    ldr r2, [r2]                        @ get the current DP value
+    push {r1-r2}
+    bl __move                           @ move the string from the parse area to the data fields
+    pop {r1-r2}                         @ restore the string length
+    add r2, r1
+    add r2, #3
+    and r2, #~3                         @ align the length to 4 bytes
+    ldr r3, =var_DP
+    str r2, [r3]                        @ update DP
+    NEXT
+
+1:  ldr r0, [r5], #4                    @ r0 = length of the string
     pushd r5
     pushd r0                            @ push the address of the string and its length
     add r5, r0
@@ -183,9 +248,9 @@ __interpret:
 
     @ Compiling a liternal number - just append the word to the current dictionary definition.
 3:  mov r7, r0                          @ r7 = the literal number
-    ldr r0, =LIT
+    ldr r0, =LITERAL
     bl __comma
-    mov r0, r7                          @ LIT is followed by the number.
+    mov r0, r7                          @ LITERAL is followed by the number.
     bl __comma
     mov r0, #-1                         @ return true  
     pop {r4-r7, pc}
