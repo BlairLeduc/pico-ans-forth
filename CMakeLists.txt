@@ -26,7 +26,7 @@ endif()
 #set(PICO_BOARD pimoroni_pico_plus2_w_rp2350 CACHE STRING "Board type")
 set(PICO_BOARD pico2_w CACHE STRING "Board type")
 set(PICO_DEOPTIMIZED_DEBUG ON)      # Disable optimizations.
-set(PICO_ANS_FORTH_VERSION "1.0.0-alpha.12")
+set(PICO_ANS_FORTH_VERSION "1.0.0-alpha.13")
 set(PICO_ANS_FORTH_TERMINAL "PicoCalc")
 #set(PICO_ANS_FORTH_TERMINAL "Pico 2")
 

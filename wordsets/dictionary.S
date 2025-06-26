@@ -601,12 +601,7 @@
     @   TODO
 
     @   6.1.2520    [CHAR] ( —- char ) [core]
-    defword "[CHAR]",CB_PRECEDENCE,CHAR_LITERAL
-    .word CHAR
-    .word BRACKET_TICK, LITERAL, COMMA
-    .word COMMA
-    .word EXIT
-
+    defcode "[CHAR]",CB_PRECEDENCE,BRACKET_CHAR,_bracket_char
 
 @
 @   2.5.1 Indefinite Loops
@@ -1039,7 +1034,7 @@
     defcode "[",CB_PRECEDENCE,LBRAC,_lbrac
 
     @   6.1.2540    ] ( —- ) [core]
-    defcode "]",CB_PRECEDENCE,RBRAC,_rbrac
+    defcode "]",,RBRAC,_rbrac
 
 @
 @   4.3.5 Explicit Literals

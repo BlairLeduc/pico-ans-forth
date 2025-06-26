@@ -15,16 +15,23 @@
     .global _char
     .thumb_func
 _char:
+    bl __char                            @ r0 = pointer to string
+    pushd r0                            @ Push the pointer to the string on the stack
+    NEXT
+
+    .global __char
+    .thumb_func
+__char: @ r0 = pointer to string
+    push {lr}
     mov r0, #32                         @ ASCII space
-    bl __word                            @ Returns r0 = length, r1 = pointer to word
+    bl __word                           @ Returns r0 = length, r1 = pointer to word
     cmp r1, #0                          @ Check if word is empty
     beq 1f                              @ If empty, return
     ldrb r0, [r0, #1]                   @ Get the first character of the word
-    pushd r0                            @ Push it on to the stack
-    NEXT
+    pop {pc}                            @ Return with the character in r0
+    
 1:  eor r0, r0
-    pushd r0                            @ Push zero on to the stack
-    NEXT
+    pop {pc}                            @ If empty, return 0 (cleared r0)
 
     .global __number
     .thumb_func

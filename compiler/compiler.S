@@ -118,8 +118,8 @@ _c_comma:
     .thumb_func
 _rbrac:
     mov r0, #1
-    movw r0, :lower16:var_STATE         @ load the address of STATE
-    movt r0, :upper16:var_STATE
+    movw r1, :lower16:var_STATE         @ load the address of STATE
+    movt r1, :upper16:var_STATE
     str r0, [r1]                        @ set STATE to 1
     NEXT
 
@@ -135,8 +135,8 @@ _rbrac:
     .thumb_func
 _lbrac:
     eor r0, r0                          @ clear r0
-    movw r0, :lower16:var_STATE         @ load the address of STATE
-    movt r0, :upper16:var_STATE
+    movw r1, :lower16:var_STATE         @ load the address of STATE
+    movt r1, :upper16:var_STATE
     str r0, [r1]                        @ set STATE to 0 (interpretation state)
     NEXT
 
@@ -154,16 +154,42 @@ _lbrac:
     .global _bracket_tick
     .thumb_func
 _bracket_tick:
+    ldr r0, =var_STATE
+    ldr r0, [r0]                        @ load the current state (compiling or interpreting)
+    cmp r0, #0                          @ is STATE 0? (interpreting)
+    beq 1f                              @ if so, branch to push the literal number on the stack
+
     @ Compilation
+    ldr r0, =LITERAL                    @ load the address of the LITERAL word
+    bl __comma                          @ append the code field address to the dictionary
     bl __tick
-    movw r1, :lower16:var_DP            @ load the address of the DP variable
-    movt r1, :upper16:var_DP
-    ldr r2, [r1]
+    bl __comma
+    NEXT
+
     @ Run-time
-    ldr r3, =LITERAL
-    str r3, [r2], #4                    @ store LITERAL
-    str r0, [r2], #4                    @ store the execution token xt
-    str r2, [r1]                        @ update DP
+ 1: mov r0, #ERR_COMPILE_ONLY_WORD
+    bl __throw
+    NEXT
+
+
+    .global _bracket_char
+    .thumb_func
+_bracket_char:
+    ldr r0, =var_STATE
+    ldr r0, [r0]                        @ load the current state (compiling or interpreting)
+    cmp r0, #0                          @ is STATE 0? (interpreting)
+    beq 1f                              @ if so, branch to push the literal number on the stack
+
+    @ Compilation
+    ldr r0, =LITERAL                    @ load the address of the LITERAL word
+    bl __comma                          @ append the code field address to the dictionary
+    bl __char
+    bl __comma
+    NEXT
+
+    @ Run-time
+ 1: mov r0, #ERR_COMPILE_ONLY_WORD
+    bl __throw
     NEXT
 
 
