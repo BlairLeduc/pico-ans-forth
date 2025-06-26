@@ -29,7 +29,7 @@ __char: @ r0 = pointer to string
     beq 1f                              @ If empty, return
     ldrb r0, [r0, #1]                   @ Get the first character of the word
     pop {pc}                            @ Return with the character in r0
-    
+
 1:  eor r0, r0
     pop {pc}                            @ If empty, return 0 (cleared r0)
 
@@ -66,12 +66,12 @@ __number: @ r0 = pointer to string
     ldrb r4, [r2], #1                   @ r5 = next character in string
 
     @ Convert 0-9, A-Z, a-z to a number 0-35.
-2:  sub r4, #'0'                        @ < '0'?
+2:  subs r4, #'0'                        @ < '0'?
     bmi 4f
     cmp r4, #10                         @ <= '9'?
     blt 3f
     and r4, #0xDF                       @ convert to uppercase (a-z -> A-Z)
-    sub r4, #17                         @ < 'A'? (17 is 'A'-'0')
+    subs r4, #17                         @ < 'A'? (17 is 'A'-'0')
     blt 4f
     add r4, #10
 
@@ -80,7 +80,7 @@ __number: @ r0 = pointer to string
 
     @ OK, so add it to r0 and loop.
     add r0, r4
-    sub r1, #1
+    subs r1, #1
     bne 1b
 
     @ Negate the result if first character was '-' (saved on the stack).
