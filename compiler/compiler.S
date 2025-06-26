@@ -305,10 +305,11 @@ _does:
     NEXT
 
     @ run-time
-1:  ldr r2, =var_DP
-    ldr r2, [r2]                        @ get the current DP value
+1:  ldr r0, =var_LATEST
+    ldr r0, [r0]                        @ get the current DP value
+    bl __to_cfa                         @ convert the address of the latest word to a code field address
     @ update the code field to point to the next word after this one
-    str r5, [r2, #-4]
+    str r5, [r0]
     b _exit
 
 
