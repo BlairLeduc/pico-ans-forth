@@ -8,8 +8,11 @@
 
     .include "forth.S"
 
-    @ Keep track of the the last created dictionary entry.
+    @   Keep track of the the last created dictionary entry.
     .set link, 0
+
+    @   Jump to the word following this one
+    .equ JUMP_TO, 0x47184B00          @ ldr/bx
 
 @
 @   1.1.6 Numeric Input
@@ -489,20 +492,20 @@
     @   6.1.0950    CONSTANT ( x “<spaces>name” -- ) [core]
     defword "CONSTANT",,CONSTANT
     .word CREATE, COMMA, DOES
-    .word 0x47184B00                    @ ldr/bx   
-    .word _paren_does, FETCH
+    .word JUMP_TO, _paren_does
+    .word FETCH
     .word EXIT
 
     @   6.1.0960    VALUE ( x “<spaces>name” -- ) [core]
     defword "VALUE",,VALUE
     .word CREATE, COMMA, DOES
-    .word 0x47184B00                    @ ldr/bx
-    .word _paren_does, FETCH
+    .word JUMP_TO, _paren_does
+    .word FETCH
     .word EXIT
 
     @   6.1.0970    VARIABLE ( —- ) [core]
     defword "VARIABLE",,VARIABLE
-    .word CREATE, COMMA
+    .word CREATE, LITERAL, 1, CELLS, ALLOT
     .word EXIT
 
 
