@@ -514,10 +514,10 @@
 @
 
     @   17.6.1.0170 -TRAILING ( c-addr u1 -— c-addr u2 ) [string]
-    @   TODO
+    defcode "-TRAILING",,DASH_TRAILING,_dash_trailing
 
     @   17.6.1.0245 /STRING ( c-addr1 u1 +n -— c-addr2 u2 ) [string]
-    @   TODO
+    defcode "/STRING",,SLASH_STRING,_slash_string
 
     @   17.6.1.0780 BLANK ( c-addr u -— ) [string]
     defcode "BLANK",,BLANK,_blank
@@ -532,10 +532,10 @@
     defcode "TO",,TO,_to
 
     @   17.6.1.0910 CMOVE ( c-addr1 c-addr2 u -— ) [string]
-    @   TODO
+    defcode "CMOVE",,CMOVE,_c_move
 
     @   17.6.1.0920 CMOVE> ( c-addr1 c-addr2 u -— ) [string]
-    @   TODO
+    defcode "CMOVE>",,CMOVE_UP,_c_move_up
 
 @
 @   2.3.4 Comparing Character Strings
