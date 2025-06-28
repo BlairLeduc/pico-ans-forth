@@ -14,6 +14,28 @@
     @   Jump to the word following this one
     .equ JUMP_TO, 0x47184B00          @ ldr/bx
 
+    @   R0                              The address of the top of the return stack.
+    defconst "R0",RZ,return_stack_top
+
+    @   S0                              Stores the address of the top of the data stack.
+    defconst "S0",SZ,data_stack_top
+
+    @   DP                              The dictionary pointer, which points to the current position in the data space.
+    defvar "DP",DP,data_space
+
+    defcode "BRANCH",,BRANCH,_branch
+
+    defcode "0BRANCH",,ZBRANCH,_zbranch
+
+    defcode "UNLOOP",,UNLOOP,_unloop
+
+    defcode "I",,I,_index_i
+
+    defcode "J",,J,_index_j
+
+    defcode "(LITERAL)",,PAREN_LITERAL,_paren_literal
+
+ 
 @
 @   1.1.6 Numeric Input
 @
@@ -23,12 +45,12 @@
 
     @   6.1.1170    DECIMAL ( —- ) [core]
     defword "DECIMAL",,DECIMAL
-    .word LITERAL, 10, BASE, STORE
+    .word PAREN_LITERAL, 10, BASE, STORE
     .word EXIT
 
     @   6.2.1660    HEX ( —- ) [core]
     defword "HEX",,HEX
-    .word LITERAL, 16, BASE, STORE
+    .word PAREN_LITERAL, 16, BASE, STORE
     .word EXIT
 
 
@@ -42,7 +64,7 @@
     @   The number of characters in ccc may be zero to the number of characters in the parse area.
 
     defword "(",CB_PRECEDENCE,COMMENT
-    .word LITERAL, ')'
+    .word PAREN_LITERAL, ')'
     .word PARSE
     .word TWODROP
     .word EXIT
@@ -505,7 +527,7 @@
 
     @   6.1.0970    VARIABLE ( —- ) [core]
     defword "VARIABLE",,VARIABLE
-    .word CREATE, LITERAL, 1, CELLS, ALLOT
+    .word CREATE, PAREN_LITERAL, 1, CELLS, ALLOT
     .word EXIT
 
 
@@ -609,7 +631,7 @@
 
     @   6.2.0700    AGAIN ( —- ) [core ext]
     defword "AGAIN",CB_PRECEDENCE,AGAIN
-    .word BRACKET_TICK, BRANCH, COMMA   @ compile branch
+    .word PAREN_LITERAL, BRANCH, COMMA  @ compile branch
     .word HERE, SUB                     @ calculate the offset back
     .word COMMA                         @ compile the offset here
     .word EXIT
@@ -621,7 +643,7 @@
 
     @   6.1.2140    REPEAT ( —- ) [core]
     defword "REPEAT",CB_PRECEDENCE,REPEAT
-    .word BRACKET_TICK, BRANCH, COMMA   @ compile branch
+    .word PAREN_LITERAL, BRANCH, COMMA  @ compile branch
     .word HERE, SUB, COMMA              @ and compile it after branch
     .word DUP
     .word HERE, SWAP, SUB               @ calculate the offset2
@@ -630,17 +652,17 @@
 
     @   6.1.2390    UNTIL ( x —- ) [core]
     defword "UNTIL",CB_PRECEDENCE,UNTIL
-    .word BRACKET_TICK, ZBRANCH, COMMA  @ compile 0branch
-    .word HERE, SUB                     @  calculate the offset from the address saved on the stack
+    .word PAREN_LITERAL, ZBRANCH, COMMA @ compile 0branch
+    .word HERE, SUB                     @ calculate the offset from the address saved on the stack
     .word COMMA                         @ compile the offset here
     .word EXIT
 
     @   6.1.2430    WHILE ( x —- ) [core]
     defword "WHILE",CB_PRECEDENCE,WHILE
-    .word BRACKET_TICK, ZBRANCH, COMMA  @ compile 0branch
+    .word PAREN_LITERAL, ZBRANCH, COMMA @ compile 0branch
     .word HERE                          @ save location of the offset2 on the stack
     .word SWAP                          @ get the original offset (from begin)
-    .word LITERAL, 0, COMMA                 @ compile a dummy offset2
+    .word PAREN_LITERAL, 0, COMMA       @ compile a dummy offset2
     .word EXIT
 
 @
@@ -648,28 +670,85 @@
 @
 
     @   6.1.1240    DO ( n1 n2 —- ) [core]
-    @   TODO
+    defword "DO",CB_PRECEDENCE,DO
+    .word PAREN_LITERAL, PAREN_LITERAL, COMMA
+    .word PAREN_LITERAL, -1, COMMA
+    .word PAREN_LITERAL, ZBRANCH, COMMA
+    .word HERE
+    .word PAREN_LITERAL, 0, COMMA
+    .word PAREN_LITERAL, TOR, COMMA     @ index
+    .word PAREN_LITERAL, TOR, COMMA     @ limit
+    .word HERE
+    .word PAREN_LITERAL, 0              @ number of leaves
+    .word EXIT
 
     @   6.2.0620    ?DO ( n1 n2 —- ) [core ext]
-    @   TODO
+    defword "?DO",CB_PRECEDENCE,Q_DO
+    .word PAREN_LITERAL, TWODUP, COMMA
+    .word PAREN_LITERAL, NEQU, COMMA
+    .word PAREN_LITERAL, ZBRANCH, COMMA
+    .word HERE
+    .word PAREN_LITERAL, 0, COMMA       @ jump to after loop
+    .word PAREN_LITERAL, TOR, COMMA     @ index
+    .word PAREN_LITERAL, TOR, COMMA     @ limit
+    .word HERE
+    .word PAREN_LITERAL, 0              @ number of leaves
+    .word EXIT
 
     @   6.1.1800    LOOP ( —- ) [core]
-    @   TODO
+    defword "LOOP",CB_PRECEDENCE,LOOP
+    .word PAREN_LITERAL, FROMR, COMMA   @ limit
+    .word PAREN_LITERAL, FROMR, COMMA   @ index
+    .word PAREN_LITERAL, INCR, COMMA
+    .word PAREN_LITERAL, TWODUP, COMMA
+    .word PAREN_LITERAL, EQU, COMMA
+    .word PAREN_LITERAL, ZBRANCH, COMMA
+    .word PAREN_LITERAL, 16, COMMA      @ skip to else
+    .word PAREN_LITERAL, TWODROP, COMMA
+    .word PAREN_LITERAL, BRANCH, COMMA
+    .word PAREN_LITERAL, 20, COMMA      @ word after the loop
+    .word PAREN_LITERAL, TOR, COMMA
+    .word PAREN_LITERAL, TOR, COMMA
+    .word PAREN_LITERAL, BRANCH, COMMA  @ compile branch
+    .word HERE, SUB, COMMA              @ and compile it after branch
+    .word DUP
+    .word HERE, SWAP, SUB
+    .word SWAP
+    .word STORE                         @ and back-fill it in the original location
+    .word EXIT
+    
 
     @   6.1.0140    +LOOP ( n1 n2 —- ) [core]
-    @   TODO
-
-    @   6.1.1680    I ( —- n ) [core]
-    @   TODO
-
-    @   6.1.1730    J ( —- n ) [core]
-    @   TODO
+    defword "+LOOP",CB_PRECEDENCE,PLUS_LOOP
+    .word PAREN_LITERAL, FROMR, COMMA   @ limit
+    .word PAREN_LITERAL, FROMR, COMMA   @ index
+    .word PAREN_LITERAL, ADD, COMMA
+    .word PAREN_LITERAL, TWODUP, COMMA
+    .word PAREN_LITERAL, EQU, COMMA
+    .word PAREN_LITERAL, ZBRANCH, COMMA
+    .word PAREN_LITERAL, 16, COMMA      @ skip to else
+    .word PAREN_LITERAL, TWODROP, COMMA
+    .word PAREN_LITERAL, BRANCH, COMMA
+    .word PAREN_LITERAL, 20, COMMA      @ word after the loop
+    .word PAREN_LITERAL, TOR, COMMA
+    .word PAREN_LITERAL, TOR, COMMA
+    .word PAREN_LITERAL, BRANCH, COMMA  @ compile branch
+    .word HERE, SUB, COMMA              @ and compile it after branch
+    .word DUP
+    .word HERE, SWAP, SUB
+    .word SWAP
+    .word STORE                         @ and back-fill it in the original location
+    .word EXIT
 
     @   6.1.1760    LEAVE ( —- ) [core]
-    @   TODO
-
-    @   6.1.2380    UNLOOP ( —- ) [core]
-    @   TODO
+    @ defword "LEAVE",CB_PRECEDENCE,LEAVE
+    @ .word PAREN_LITERAL, FROMR, COMMA   @ limit
+    @ .word PAREN_LITERAL, FROMR, COMMA   @ index
+    @ .word PAREN_LITERAL, TWODROP, COMMA
+    @ .word PAREN_LITERAL, BRANCH, COMMA
+    @ .word HERE
+    @ .word PAREN_LITERAL, 0, COMMA
+    @ .word EXIT
 
 @
 @   2.5.3 Conditionals
@@ -677,9 +756,9 @@
 
     @   6.1.1310    ELSE ( —- ) [core]
     defword "ELSE",CB_PRECEDENCE,ELSE
-    .word BRACKET_TICK, BRANCH, COMMA   @ definite branch to just over the false-part
+    .word PAREN_LITERAL, BRANCH, COMMA  @ definite branch to just over the false-part
     .word HERE                          @ save location of the offset on the stack
-    .word LITERAL, 0, COMMA                 @ compile a dummy offset
+    .word PAREN_LITERAL, 0, COMMA       @ compile a dummy offset
     .word SWAP                          @ now back-fill the original (if) offset
     .word DUP                           @ same as for then word above
     .word HERE, SWAP, SUB
@@ -688,9 +767,9 @@
 
     @   6.1.1700    IF ( x —- ) [core]
     defword "IF",CB_PRECEDENCE,IF
-    .word BRACKET_TICK, ZBRANCH, COMMA  @ compile 0branch
+    .word PAREN_LITERAL, ZBRANCH, COMMA @ compile 0branch
     .word HERE                          @ save location of the offset on the stack
-    .word LITERAL, 0, COMMA                 @ compile a dummy offset
+    .word PAREN_LITERAL, 0, COMMA       @ compile a dummy offset
     .word EXIT
 
     @   6.1.2270    THEN ( —- ) [core]
@@ -706,12 +785,12 @@
 
     @   6.2.0873    CASE ( —- ) [core]
     defword "CASE",CB_PRECEDENCE,CASE
-    .word LITERAL, 0
+    .word PAREN_LITERAL, 0
     .word EXIT
 
     @   6.2.1342    ENDCASE ( —- ) [core]
     defword "ENDCASE",CB_PRECEDENCE,ENDCASE
-    .word BRACKET_TICK, DROP, COMMA
+    .word PAREN_LITERAL, DROP, COMMA
     .word QDUP, ZBRANCH, 16
     .word THEN, BRANCH, -20
     .word EXIT
@@ -723,10 +802,10 @@
 
     @   6.2.1950    OF ( x —- ) [core]
     defword "OF",CB_PRECEDENCE,OF
-    .word BRACKET_TICK, OVER, COMMA
-    .word BRACKET_TICK, EQU, COMMA
+    .word PAREN_LITERAL, OVER, COMMA
+    .word PAREN_LITERAL, EQU, COMMA
     .word IF
-    .word BRACKET_TICK, DROP, COMMA
+    .word PAREN_LITERAL, DROP, COMMA
     .word EXIT
 
 @
@@ -756,18 +835,17 @@
 
     @   9.6.2.0670  ABORT ( -- ) [core]
     defword "ABORT",,abort
-    .word LITERAL, -1
+    .word PAREN_LITERAL, -1
     .word THROW
     .word EXIT
 
     @   9.6.2.0680  ABORT" ( i*x flag -— ); ( R: j*x -— ) [core]
     defword "ABORT\"",,abort_quote  @"
-    .word LITERAL, '"'
+    .word PAREN_LITERAL, '"'
     .word PARSE
     .word ROT, ZBRANCH, 16
-    .word LITERAL, -2
+    .word PAREN_LITERAL, -2
     .word THROW
-    .word THEN
     .word EXIT
 
     @   9.6.1.0875  CATCH ( i*x xt -- j*x 0 | i*x n ) [exception]
@@ -1004,8 +1082,8 @@
 
     @   6.1.0706    ALIGNED ( addr —- a-addr ) [core]
     defword "ALIGNED",,ALIGNED
-    .word LITERAL, 3, ADD
-    .word LITERAL, 3, INVERT
+    .word PAREN_LITERAL, 3, ADD
+    .word PAREN_LITERAL, 3, INVERT
     .word AND
     .word EXIT
 
@@ -1021,14 +1099,6 @@
 @
 @   4.3.3 The Forth Compiler
 @
-
-    @   6.2.2530    [COMPILE] ( “<spaces>name” -- ) [core ext]
-    @ defword "[COMPILE]",CB_PRECEDENCE,BRACKET_COMPILE
-    @ .word WORD                          @ get the next word
-    @ .word PAREN_FIND                    @ find it in the dictionary
-    @ .word TCFA                          @ get its code field 
-    @ .word COMMA                         @ and compile that
-    @ .word EXIT
 
     @   6.1.2250    STATE ( —- a-addr ) [core]
     defvar "STATE",STATE,0
@@ -1085,25 +1155,9 @@
 @   Internal
 @
 
-    defcode "BRANCH",,BRANCH, _branch
-
-    defcode "0BRANCH",,ZBRANCH, _zbranch
-
     defcode "BATTERY",,BATTERY,_battery
 
     defcode "BOOTSEL",,BOOTSEL,_bootsel
 
-    @   DOCOL [core]
-    @defconst "DOCOL",DOCOL,_docol
-
-    @   R0                              The address of the top of the return stack.
-    defconst "R0",RZ,return_stack_top
-
-    @   S0                              Stores the address of the top of the data stack.
-    defconst "S0",SZ,data_stack_top
-
-    @   DP                              The dictionary pointer, which points to the current position in the data space.
-    defvar "DP",DP,data_space
-
     @   LATEST                          Points to the latest (most recently defined) word in the dictionary.
-    defvar "LATEST",LATEST,link
+    defvar "LATEST",LATEST,1b

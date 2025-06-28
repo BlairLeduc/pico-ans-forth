@@ -120,16 +120,19 @@ _literal:
     ldr r0, =var_STATE
     ldr r0, [r0]                        @ load the current state (compiling or interpreting)
     cmp r0, #0                          @ is STATE 0? (interpreting)
-    beq 1f                              @ if so, branch to push the literal number on the stack
+    beq _paren_literal                  @ if so, branch to push the literal number on the stack
 
     @ Compiling a literal number - append the word to the current dictionary definition.
-    ldr r0, =LITERAL                    @ load the address of the LITERAL word
+    ldr r0, =PAREN_LITERAL                    @ load the address of the LITERAL word
     bl __comma                          @ append the code field address to the dictionary
     popd r0
     bl __comma                          @ append the literal number to the dictionary
     NEXT
 
-1:  ldr r0, [r5], #4
+    .global _paren_literal
+    .thumb_func
+_paren_literal:
+    ldr r0, [r5], #4
     pushd r0                            @ push the literal number on to the stack
     NEXT
 
@@ -282,7 +285,7 @@ __interpret:
 
     @ Compiling a liternal number - just append the word to the current dictionary definition.
 3:  mov r7, r0                          @ r7 = the literal number
-    ldr r0, =LITERAL
+    ldr r0, =PAREN_LITERAL
     bl __comma
     mov r0, r7                          @ LITERAL is followed by the number.
     bl __comma

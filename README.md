@@ -35,19 +35,6 @@ A [Raspberry Pi Pico 2](https://www.raspberrypi.com/products/raspberry-pi-pico-2
 When debugging, I use [VS Code](https://code.visualstudio.com) and the [Raspberry Pi Pico](https://marketplace.visualstudio.com/items?itemName=raspberry-pi.raspberry-pi-pico) extension.
 
 
-## Status
-
-### ANS Forth
-I have implemented words from the core and tools wordsets, and I completed the implementation of defining words.
-
-I am now working literals and constants, followed by structural programming.
-
-### PicoCalc
-I have reliable drivers for the LCD and Keyboard on the PicoCalc. The SD card and sound is not supported. 
-
-### Pico 2 (W)
-Wifi and block (flash) is not supported.
-
 ## Roadmap
 
 My current plan:
